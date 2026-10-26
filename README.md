@@ -1,5 +1,12 @@
 # Deployment Guide
 
+## Live instance (deployed 2026-10-26)
+
+- **Frontend**: https://d1cuqmer7awnbz.cloudfront.net/main
+- **Backend API**: https://9877dqd8v8.execute-api.us-west-2.amazonaws.com/develop
+- **AWS account**: 325877452779 (us-west-2)
+- **Source**: https://github.com/granchenkooleg/marathon2026 (private)
+
 This repo uses three deployment tracks:
 
 - Terraform for shared AWS infrastructure under `infra/terraform`
