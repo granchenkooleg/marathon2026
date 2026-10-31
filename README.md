@@ -1,5 +1,8 @@
 # Deployment Guide
 
+> **Homework #8 — test automation:** end-to-end UI + API tests for this deployment live in [`aqa/`](aqa/README.md)
+> (direction 2, levels 1–2, Playwright + TypeScript, CI in [`.github/workflows/e2e.yml`](.github/workflows/e2e.yml)).
+
 ## Live instance (deployed 2026-10-26)
 
 - **Frontend**: https://d1cuqmer7awnbz.cloudfront.net/main

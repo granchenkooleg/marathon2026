@@ -1,0 +1,27 @@
+{
+  "name": "restaurant-aqa-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "End-to-end tests (UI + API) for the deployed Green & Tasty restaurant app",
+  "scripts": {
+    "test": "playwright test",
+    "test:l1": "playwright test --grep @L1",
+    "test:l2": "playwright test --grep @L2",
+    "test:ui": "playwright test --grep @ui",
+    "test:api": "playwright test --grep @api",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:known-defects": "playwright test --grep @known-defect",
+    "report": "playwright show-report reports/html",
+    "typecheck": "tsc --noEmit",
+    "codegen": "playwright codegen"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "22.10.2",
+    "dotenv": "16.4.7",
+    "typescript": "5.6.3"
+  }
+}

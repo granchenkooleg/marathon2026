@@ -1,0 +1,93 @@
+name: E2E tests
+
+on:
+  push:
+    branches: [master]
+    paths: ['aqa/**', '.github/workflows/e2e.yml']
+  pull_request:
+    paths: ['aqa/**', '.github/workflows/e2e.yml']
+  workflow_dispatch:
+    inputs:
+      grep:
+        description: 'Subset by tag, e.g. @L1, @L2, @smoke, @api, @ui, "@L2.*@ui" (empty = all tests)'
+        required: false
+        default: ''
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: aqa
+    env:
+      CI: 'true'
+      # Addresses of YOUR deployment live in repository variables, not in the code:
+      # Settings → Secrets and variables → Actions → Variables.
+      BASE_URL: ${{ vars.BASE_URL }}
+      API_URL: ${{ vars.API_URL }}
+      GREP: ${{ inputs.grep }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: aqa/package-lock.json
+
+      - name: Check configuration
+        run: |
+          if [ -z "$BASE_URL" ] || [ -z "$API_URL" ]; then
+            echo "::error::Repository variables BASE_URL and API_URL are not set (Settings → Secrets and variables → Actions → Variables)."
+            exit 1
+          fi
+
+      - run: npm ci
+
+      - run: npx playwright install --with-deps chromium
+
+      - name: Type check
+        run: npm run typecheck
+
+      # A failing test must not stop the pipeline: reports and artifacts are still published,
+      # and the job is marked red only at the very end.
+      - name: Run tests
+        id: tests
+        continue-on-error: true
+        run: npx playwright test ${GREP:+--grep "$GREP"}
+
+      - name: Summary
+        if: always()
+        run: node scripts/ci-summary.mjs >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-html-report
+          path: aqa/reports/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Upload traces, videos and screenshots of failed tests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-evidence
+          path: aqa/test-results/
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Mark the job failed when tests failed
+        if: steps.tests.outcome == 'failure'
+        run: |
+          echo "::error::Some tests failed. See the summary and the playwright-html-report artifact."
+          exit 1
