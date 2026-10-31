@@ -1,7 +1,7 @@
 # US11 — Requirements review
 
 **Story:** `[Draft] US11_Guest Viewing Reservation Menu` (Epic: Order Management, Role: Guest). Source: course PDF, 1 page.
-**Design:** the Figma file has not arrived yet, so the design checks are still open (see the end of this file).
+**Design:** Figma, frame "Placing pre-order by guest | Menu" (`evidence/figma-guest-menu.png`, design notes in `evidence/figma-guest-menu-notes.png`). The screenshot is low resolution, so the small text in the design was read approximately. Where that matters, the finding says so.
 **Method:** each line of the story was checked for clear meaning, testability, consistency, completeness and scope. Status names were checked against the backend code in this repository.
 
 ## The story as written
@@ -21,7 +21,7 @@
 
 ## Summary
 
-**29 findings: 9 High, 14 Medium, 6 Low.**
+**35 findings: 9 High, 17 Medium, 9 Low.** R-01 to R-29 come from the story text. R-30 to R-35 come from comparing the story with Figma.
 
 | Severity | Meaning |
 |---|---|
@@ -32,7 +32,7 @@
 **The five questions to resolve first:**
 1. **R-06, R-07:** which statuses allow the menu? "Created" doesn't exist in the system, and "reservation **or** group" doesn't say which one decides.
 2. **R-04:** is adding to the subcart part of this story? The description covers only viewing.
-3. **R-16:** the system has three dish states (Available, On Stop, Out of Stock), but the story describes only On Stop.
+3. **R-16, R-30:** the system has three dish states (Available, On Stop, Out of Stock), but the story describes only On Stop, and the Figma badge seems to use a third name.
 4. **R-09:** what "structured logically by category" means in the UI: sections or filter tabs, and in what order.
 5. **R-20, R-22:** the quantity rules and the errors when adding a dish.
 
@@ -114,6 +114,21 @@ Type: **Ambiguity** = more than one reading. **Not testable** = no objective pas
 | R-28 | Whole story | Missing | Medium | No non-functional requirements: mobile layout (guests open the invite link on a phone), load time, supported browsers, accessibility (keyboard use; status shown not only by colour). | Add them, or link to the project-wide non-functional requirements. |
 | R-29 | Whole story | Missing | Low | Search, filtering and sorting are not mentioned. | If the design has them, add them to the story. If not, mark them out of scope. |
 
+### Story vs Figma
+
+Checked against Figma, frame "Placing pre-order by guest | Menu", and its design notes.
+
+| ID | Where | Type | Sev. | Problem | Question for the PO / suggested fix |
+|---|---|---|---|---|---|
+| R-30 | AC4 vs Figma | Inconsistency | Medium | The badge on the unavailable dish in Figma seems to read **"Sold Out"** (the text is tiny in the screenshot, so check it in Figma). The story says "On Stop", and the system has `OnStop` and `OutOfStock`. That makes three names for unavailable dishes. | Define one label per state and use it in the story, the design and the app. |
+| R-31 | AC2 vs Figma | Inconsistency | Medium | AC2 requires an availability status on **each** menu item. Figma shows a badge only on the unavailable dish; available dishes have none. | Decide which is right: a label on every dish, or on unavailable dishes only. Update the story or the design. |
+| R-32 | Figma vs story | Missing | Low | Figma has "Sort by" with "Popular First" (default), "Newest First", "Price Low to High", "Price High to Low". The story doesn't mention sorting (see R-29). | Add sorting to the story with the default value, or mark it out of scope. |
+| R-33 | Figma vs story | Missing | Medium | Figma has a Guest variant header (logo and cart icon only) and a reservation strip with the address, table, **date** and time. The story has no AC for either (see R-02). | Add ACs for the header and the strip, or link the story to the frame. |
+| R-34 | AC3 vs Figma | Ambiguity | Low | In Figma only the first card shows the [Pre-Order] button. Is the button always visible, or only on hover? | Define the button's states: default, hover, disabled. |
+| R-35 | AC2 vs Figma | Ambiguity | Low | Figma prices are whole dollars ("$17"), so the format for cents is not shown (see R-12). | Define it: "$17.00" or "$17". |
+
+**Partly answered by Figma:** R-09 and R-10 (categories are tabs "Appetizers", "Main Courses", "Desserts", and "Appetizers" is selected by default); R-13 (weight format "450 g").
+
 ## Assumptions used in the test cases
 
 Until the PO answers, the test cases use these assumptions. Every test that relies on one says so in its "Assumption" field.
@@ -122,15 +137,10 @@ Until the PO answers, the test cases use these assumptions. Every test that reli
 |---|---|---|
 | A-1 | The menu contains all dishes of the reservation's location, including unavailable ones. Dishes of other locations are not shown. | R-05 |
 | A-2 | The menu is usable only when the reservation is `Reserved` **and** the group is `Open`. Otherwise the Guest sees a message and cannot add dishes. | R-06, R-07, R-08 |
-| A-3 | Categories appear in this order: Appetizers, Main Courses, Desserts. An empty category is hidden. | R-09, R-10 |
+| A-3 | As in Figma: categories are tabs "Appetizers", "Main Courses", "Desserts", in this order, and "Appetizers" is selected by default. An empty category is hidden. | R-09, R-10 |
 | A-4 | **Out of Stock** behaves like On Stop: the dish is visible, marked with its own label, and cannot be added. | R-16 |
 | A-5 | One click on Pre-Order adds 1. Adding the same dish again increases the quantity on the same line. | R-20 |
-| A-6 | Price format `$12.50`; weight format `250 g`. | R-12, R-13 |
+| A-6 | Price format `$12.50` (two decimals; Figma shows only whole dollars). Weight format `450 g`, as in Figma. | R-12, R-13, R-35 |
 | A-7 | No live updates: changes appear after a page reload. | R-26 |
 | A-8 | After a successful add, the Guest sees a confirmation. After a failed add, the Guest sees an error, and the dish is not added. | R-21, R-22 |
-| A-9 | AC2 is read literally: every dish shows its availability status, including "Available". | R-15 |
-
-## Design checks still open (waiting for the Figma file)
-
-- Compare each AC with the Figma screens: card fields, labels, badge text, button text, category layout.
-- Note anything in the design that the story doesn't mention (sorting, filters, cart icon, dish details), and anything in the story that the design doesn't show.
+| A-9 | AC2 is read literally: every dish shows its availability status, including "Available". Figma disagrees (R-31). | R-15, R-31 |
