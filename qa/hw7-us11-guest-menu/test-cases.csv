@@ -1,0 +1,96 @@
+ID,Title,Priority,Requirement,Preconditions,Test data,Steps,Expected result,Assumption / finding,Actual result,Status
+TC-01,Guest who joined an open group pre-order sees the menu,High,"Pre-condition 1, 2; AC1","R1 is Reserved, group is Open. Guest has the invite link and has not joined yet.","R1, L1","1. Open the R1 invite link in a new browser.
+2. Enter the name ""Anna"" and confirm.","1. The menu screen opens.
+2. Dishes of L1 are shown.",A-2,,Not run
+TC-02,Guest cannot add dishes after the Owner submitted the group pre-order,High,Pre-condition 2,G1 joined R1. The Owner submitted the group pre-order (group = Submitted).,"R1, G1, D1","1. As G1, reload the menu page.
+2. Click Pre-Order on D1.","1. G1 sees a message that the group pre-order is closed.
+2. D1 is not added to the subcart.","A-2 (R-06, R-07, R-08)",,Not run
+TC-03,Guest cannot add dishes when the reservation is cancelled,High,Pre-condition 2,G1 joined R1. The Owner cancelled R1 (reservation = Cancelled). The group was not submitted.,"R1, G1, D1","1. As G1, reload the menu page.
+2. Click Pre-Order on D1.","1. G1 sees a message that the reservation is cancelled.
+2. D1 is not added to the subcart.","A-2 (R-06, R-07, R-08)",,Not run
+TC-04,Menu is not usable before the guest enters a name,Medium,Pre-condition 1,Guest opens the R1 invite link for the first time.,R1,"1. Open the R1 invite link.
+2. Try to close the name dialog with Esc and with the close (X) button.
+3. Press Tab several times to reach a Pre-Order button.","1. The name dialog stays open.
+2. No Pre-Order button can be reached or clicked until the guest joins.",—,,Not run
+TC-05,Menu shows all dishes of the reservation's location and only them,High,Description; AC1,G1 joined R1.,"L1 (D1–D7), L2 (D8)","1. Open the menu as G1.
+2. Compare the dishes shown with the L1 dish list in the admin panel or API.","1. All 7 dishes of L1 are shown, including unavailable D4 and D5.
+2. D8 (from L2) is not shown.",A-1 (R-05),,Not run
+TC-06,Dishes are grouped by category in a fixed order,High,AC1,G1 joined R1.,D1–D7,"1. Open the menu as G1.
+2. Check the category groups and their order.","1. Groups appear in this order: Appetizers (D1, D6), Main Courses (D2, D4, D7), Desserts (D3, D5).
+2. Each dish appears in exactly one group, and it is the correct one.","A-3 (R-09, R-10)",,Not run
+TC-07,Empty category is hidden,Low,AC1,"Admin removed all desserts (D3, D5) from L1. G1 joined R1.",L1 without desserts,1. Open the menu as G1.,"1. No Desserts group or tab is shown.
+2. No empty section is left on the page.",A-3 (R-09),,Not run
+TC-08,"Dish card shows name, price, weight, image and status",High,AC2,G1 joined R1.,D1,"1. Open the menu as G1.
+2. Find the D1 card and compare it with the D1 data in the admin panel or API.","1. The card shows: name, price, weight in grams, image and availability status.
+2. Every value matches the source data.",A-9 (R-15),,Not run
+TC-09,Price is shown with currency and two decimals,Medium,AC2,G1 joined R1. Admin set D2 price = 9.,"D1 = 12.5, D2 = 9","1. Open the menu as G1.
+2. Read the D1 and D2 prices.","1. D1 shows ""$12.50"".
+2. D2 shows ""$9.00"".",A-6 (R-12),,Not run
+TC-10,Serving size is shown in grams,Medium,AC2,G1 joined R1.,D1 weight = 250,"1. Open the menu as G1.
+2. Read the weight on the D1 card.","1. The weight is shown as ""250 g"".",A-6 (R-13),,Not run
+TC-11,Dish without an image shows a placeholder,Low,AC2,G1 joined R1.,D6 (no image),"1. Open the menu as G1.
+2. Find the D6 card.","1. A placeholder image is shown, with no broken-image icon.
+2. The card layout matches the other cards.
+3. The image alt text is the dish name.",R-14,,Not run
+TC-12,Long dish name does not break the card,Low,AC2,G1 joined R1.,D7 (name > 60 chars),"1. Open the menu as G1 at 1440 px and at 375 px width.
+2. Find the D7 card.","1. The name wraps or is shortened with ""…"", and the full name can still be read.
+2. Price, weight and the Pre-Order button stay visible and aligned.",—,,Not run
+TC-13,Available dish shows its availability status,Medium,AC2,G1 joined R1.,D1 (Available),"1. Open the menu as G1.
+2. Check the D1 card for an availability status.","1. D1 shows the status ""Available"" (or the label the design defines).",A-9 (R-15),,Not run
+TC-14,Guest adds an available dish to the subcart,High,AC3,G1 joined R1. G1's subcart is empty.,D1,"1. Click Pre-Order on D1.
+2. Open the subcart.","1. A confirmation is shown after step 1.
+2. The subcart has D1 with quantity 1, price $12.50 and total $12.50.","A-5, A-8 (R-20, R-21)",,Not run
+TC-15,Adding the same dish twice increases the quantity,Medium,AC3,G1 joined R1. G1's subcart is empty.,D1,"1. Click Pre-Order on D1 two times.
+2. Open the subcart.","1. The subcart has one D1 line with quantity 2.
+2. The total is $25.00.",A-5 (R-20),,Not run
+TC-16,Guest adds dishes from different categories,Medium,AC3,G1 joined R1. G1's subcart is empty.,"D1, D2, D3","1. Click Pre-Order on D1, D2 and D3.
+2. Open the subcart.","1. The subcart has 3 lines with quantity 1 each.
+2. The total equals the sum of the 3 prices.",A-5,,Not run
+TC-17,Subcart is personal to each guest,High,AC3,G1 (browser A) and G2 (browser B) joined R1. Both subcarts are empty.,"G1, G2, D1","1. In browser A, as G1, click Pre-Order on D1.
+2. In browser B, as G2, open the subcart.
+3. In browser A, as G1, open the subcart.","1. G2's subcart is empty.
+2. G1's subcart has D1.",R-18,,Not run
+TC-18,On Stop dish is clearly marked as unavailable,High,AC4,G1 joined R1.,D4 (On Stop),"1. Open the menu as G1.
+2. Find the D4 card.","1. D4 has the text label ""On Stop"" (not only a colour).
+2. The card looks different from available dishes (e.g., greyed out).",R-23,,Not run
+TC-19,On Stop dish cannot be added with the mouse,High,AC4,G1 joined R1. G1's subcart is empty. DevTools Network tab is open.,D4 (On Stop),"1. Click Pre-Order on D4.
+2. Click on the D4 card itself.
+3. Open the subcart.","1. The Pre-Order button is disabled.
+2. No confirmation is shown and no add-dish request is sent.
+3. The subcart is empty.",R-23,,Not run
+TC-20,On Stop dish cannot be added with the keyboard,Medium,AC4,G1 joined R1. G1's subcart is empty.,D4 (On Stop),"1. Use Tab to move focus to the D4 card.
+2. Press Enter, then Space.
+3. Open the subcart.","1. D4's Pre-Order button cannot be activated from the keyboard.
+2. The subcart is empty.",R-23,,Not run
+TC-21,Out of Stock dish is marked and cannot be added,Medium,"AC2, AC4",G1 joined R1. G1's subcart is empty.,D5 (Out of Stock),"1. Open the menu as G1.
+2. Check the D5 card.
+3. Click Pre-Order on D5.","1. D5 has the label ""Out of Stock"".
+2. The button is disabled, and D5 is not added.",A-4 (R-16),,Not run
+TC-22,Dish that went On Stop after the menu loaded cannot be added,High,"AC3, AC4, AC5",G1 joined R1 and has the menu open. D2 is Available.,D2,"1. Admin sets D2 to On Stop.
+2. Without reloading, G1 clicks Pre-Order on D2.
+3. Open the subcart.","1. G1 sees an error saying D2 is no longer available.
+2. D2 is not added to the subcart.",A-8 (R-22),,Not run
+TC-23,Status change is shown after a page reload,High,AC5,G1 joined R1 and has the menu open. D2 is Available.,D2,"1. Admin sets D2 to On Stop.
+2. G1 reloads the page.
+3. Admin sets D2 back to Available.
+4. G1 reloads the page.","1. After step 2, D2 is shown as On Stop and cannot be added.
+2. After step 4, D2 is Available and can be added.",A-7 (R-26),,Not run
+TC-24,Price change and new dish are shown after a page reload,Medium,AC5,G1 joined R1 and has the menu open.,"D1 new price 14; new dish D9 (Dessert, Available)","1. Admin changes the D1 price to 14 and adds D9 to L1.
+2. G1 reloads the page.","1. D1 shows ""$14.00"".
+2. D9 appears under Desserts.","A-6, A-7",,Not run
+TC-25,Loading state is shown while the menu loads,Low,R-27 (missing AC),G1 joined R1. DevTools network throttling = Slow 3G.,—,1. Reload the menu page.,"1. A loading indicator is shown until the dishes appear.
+2. No error or ""empty menu"" message flashes during loading.",R-27,,Not run
+TC-26,Empty menu shows a message,Medium,R-27 (missing AC),"Reservation at L3 (no dishes), group Open, guest joined.",L3,1. Open the menu.,"1. A clear message says the menu is empty.
+2. The page layout is not broken.",R-27,,Not run
+TC-27,Menu load error shows a message and a way to retry,Medium,R-27 (missing AC),"G1 joined R1. In DevTools, block the menu request (or go offline).",—,"1. Reload the menu page.
+2. Unblock the request (or go online) and retry.","1. An error message is shown, and the page does not crash.
+2. After the retry, the menu loads.",R-27,,Not run
+TC-28,Menu works on a 375 px mobile screen,Medium,R-28 (missing NFR),G1 joined R1. Browser width = 375 px (DevTools device mode).,D1–D7,"1. Open the menu.
+2. Scroll through all categories.
+3. Click Pre-Order on D1.","1. No horizontal scrolling.
+2. Cards, prices and statuses are readable.
+3. D1 is added.",R-28,,Not run
+TC-29,Menu can be used with the keyboard only,Low,R-28 (missing NFR),G1 joined R1.,"D1, D4","1. Use Tab to go through the menu.
+2. Press Enter on D1's Pre-Order button.","1. Focus is visible and moves in a logical order.
+2. D1 is added.
+3. The status of D4 is shown as text, not only by colour.",R-28,,Not run
