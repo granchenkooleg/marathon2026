@@ -39,9 +39,9 @@ jobs:
       RP_PROJECT: ${{ vars.RP_PROJECT }}
       RP_API_KEY: ${{ secrets.RP_API_KEY }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -74,7 +74,7 @@ jobs:
 
       - name: Upload HTML report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: playwright-html-report
           path: aqa/reports/
@@ -83,7 +83,7 @@ jobs:
 
       - name: Upload traces, videos and screenshots of failed tests
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: failure-evidence
           path: aqa/test-results/
