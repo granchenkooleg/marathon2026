@@ -1,13 +1,13 @@
 # Homework #7 (Manual QA): US11 "Guest Viewing Reservation Menu"
 
-**For submission:** `hw7-us11-test-cases-and-defects.xlsx`. It has two sheets, "Test cases" and "Defect reports", in the course template layout, with screenshots attached to each defect. Upload it to Google Drive and open it with Google Sheets.
+**For submission:** `hw7-us11-qa.xlsx`, with all four tasks in one workbook. Tabs: "Requirements review", "Test cases" and "Defect reports". The last two follow the course template, and each defect has its screenshot. Upload the file to Google Drive, open it with Google Sheets, and share it as "Anyone with the link: Viewer".
 
 | # | Task | Result | File |
 |---|---|---|---|
-| 1 | Analyse the requirements and the Figma design | **35 findings** (9 High), questions for the PO, 9 assumptions | `01-requirements-review.md` |
-| 2 | Cover the story with test cases | **30 test cases**, linked to the ACs | `02-test-cases.md`, sheet "Test cases" |
-| 3 | Test the story against the app screenshot | **3 Passed, 8 Failed, 19 Not run** (a static screenshot can't show clicks, other data or other states) | `02-test-cases.md`, sheet "Test cases" |
-| 4 | Defect reports | **8 defects:** 1 Major, 6 Minor, 1 Trivial | `04-defect-reports.md`, sheet "Defect reports" |
+| 1 | Analyse the requirements and the Figma design | **35 findings** (9 High), questions for the PO, 9 assumptions | `01-requirements-review.md`, tab "Requirements review" |
+| 2 | Cover the story with test cases | **30 test cases**, linked to the ACs | `02-test-cases.md`, tab "Test cases" |
+| 3 | Test the story against the app screenshot | **3 Passed, 8 Failed, 19 Not run** (a static screenshot can't show clicks, other data or other states) | `02-test-cases.md`, tab "Test cases" |
+| 4 | Defect reports | **8 defects:** 1 Major, 6 Minor, 1 Trivial | `04-defect-reports.md`, tab "Defect reports" |
 | — | Leads from the code | Where the code explains a defect | `03-leads-from-code.md` |
 
 ## Defects
@@ -45,4 +45,4 @@ Test cases and defects live in one script. Edit it, then run:
 python3 -I qa/hw7-us11-guest-menu/tools/build_docs.py
 ```
 
-It rewrites `02-test-cases.md`, `04-defect-reports.md`, the `.xlsx` and `evidence/bug-*.png`.
+It rewrites `02-test-cases.md`, `04-defect-reports.md`, the `.xlsx` and `evidence/bug-*.png`. The "Requirements review" tab is read from `01-requirements-review.md`, so edit the review there and rebuild.

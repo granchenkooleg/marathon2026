@@ -1,6 +1,6 @@
 # US11 — Defect reports
 
-**Found on:** the course screenshot of the app (env P_PRD, Microsoft Edge), checked against US11 and Figma, frame "Placing pre-order by guest | Menu". The same reports are in `hw7-us11-test-cases-and-defects.xlsx`, sheet "Defect reports".
+**Found on:** the course screenshot of the app (env P_PRD, Microsoft Edge), checked against US11 and Figma, frame "Placing pre-order by guest | Menu". The same reports are in `hw7-us11-qa.xlsx`, sheet "Defect reports".
 
 **Severity:** Blocker > Critical > Major > Minor > Trivial (impact). **Priority:** High > Medium > Low (how soon to fix).
 

@@ -2,7 +2,7 @@
 
 **Story:** `[Draft] US11_Guest Viewing Reservation Menu`. **Tested on:** the course screenshot of the app (`evidence/app-menu-screenshot.png`, env P_PRD) against the story and Figma, frame "Placing pre-order by guest | Menu" (`evidence/figma-guest-menu.png`).
 
-**Layout:** the course template: ID, Title, Pre-conditions, Steps, Expected result (one per step), Status. The same cases are in `hw7-us11-test-cases-and-defects.xlsx`, sheet "Test cases".
+**Layout:** the course template: ID, Title, Pre-conditions, Steps, Expected result (one per step), Status. The same cases are in `hw7-us11-qa.xlsx`, sheet "Test cases".
 
 **30 test cases: 3 Passed, 8 Failed, 19 Not run.**
 

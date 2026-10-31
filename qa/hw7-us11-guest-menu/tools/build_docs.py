@@ -3,7 +3,8 @@
 
 Single source of truth for test cases and defects. Writes:
   02-test-cases.md, 04-defect-reports.md          readable copies
-  hw7-us11-test-cases-and-defects.xlsx            course template layout
+  hw7-us11-qa.xlsx            tabs: Requirements review (from 01-requirements-review.md),
+                                                  Test cases, Defect reports (course template layout)
   evidence/bug-XX.png                             annotated screenshot crops
 
 Run:  python3 -I qa/hw7-us11-guest-menu/tools/build_docs.py
@@ -15,13 +16,13 @@ from openpyxl import Workbook
 from openpyxl.cell.rich_text import CellRichText, TextBlock
 from openpyxl.cell.text import InlineFont
 from openpyxl.drawing.image import Image as XLImage
-from openpyxl.styles import Alignment, Border, Font, Side
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[1]
 EVIDENCE = ROOT / "evidence"
 APP_SHOT = EVIDENCE / "app-menu-screenshot.png"
-XLSX = ROOT / "hw7-us11-test-cases-and-defects.xlsx"
+XLSX = ROOT / "hw7-us11-qa.xlsx"
 
 FIGMA_FRAME = 'Figma, frame "Placing pre-order by guest | Menu"'
 ENV = "P_PRD\n(d28jftogiwtein.cloudfront.net, Microsoft Edge)"
@@ -396,7 +397,7 @@ def write_test_cases_md() -> None:
            "**Tested on:** the course screenshot of the app (`evidence/app-menu-screenshot.png`, env P_PRD) "
            f"against the story and {FIGMA_FRAME} (`evidence/figma-guest-menu.png`).\n",
            "**Layout:** the course template: ID, Title, Pre-conditions, Steps, Expected result (one per step), Status. "
-           "The same cases are in `hw7-us11-test-cases-and-defects.xlsx`, sheet \"Test cases\".\n",
+           "The same cases are in `hw7-us11-qa.xlsx`, sheet \"Test cases\".\n",
            f"**{len(TEST_CASES)} test cases: {counts['Passed']} Passed, {counts['Failed']} Failed, "
            f"{counts['Not run']} Not run.**\n",
            "A screenshot is one static picture. A case is **Passed** or **Failed** only when the screenshot shows every "
@@ -430,7 +431,7 @@ def write_test_cases_md() -> None:
 def write_defects_md() -> None:
     out = ["# US11 — Defect reports\n",
            "**Found on:** the course screenshot of the app (env P_PRD, Microsoft Edge), checked against US11 and "
-           f"{FIGMA_FRAME}. The same reports are in `hw7-us11-test-cases-and-defects.xlsx`, sheet \"Defect reports\".\n",
+           f"{FIGMA_FRAME}. The same reports are in `hw7-us11-qa.xlsx`, sheet \"Defect reports\".\n",
            "**Severity:** Blocker > Critical > Major > Minor > Trivial (impact). "
            "**Priority:** High > Medium > Low (how soon to fix).\n",
            "| ID | Summary | Severity | Priority | Test case |", "|---|---|---|---|---|"]
@@ -486,8 +487,8 @@ def lines_needed(text: str, chars: int) -> int:
     return sum(max(1, -(-len(line) // chars)) for line in str(text).split("\n"))
 
 
-def setup_sheet(ws) -> None:
-    for col, width in COL_CHARS.items():
+def setup_sheet(ws, widths: dict = COL_CHARS) -> None:
+    for col, width in widths.items():
         ws.column_dimensions[col].width = width
     ws.sheet_view.showGridLines = True
     ws.page_setup.orientation = "landscape"
@@ -564,22 +565,155 @@ def write_bug_sheet(ws, images: dict) -> None:
         row += 6
 
 
-def write_xlsx(images: dict) -> None:
+# ---------------------------------------------------------------------------
+# Requirements review tab: parsed from 01-requirements-review.md (its single source)
+# ---------------------------------------------------------------------------
+REVIEW_MD = ROOT / "01-requirements-review.md"
+REVIEW_COLS = {"A": 8, "B": 18, "C": 14, "D": 10, "E": 62, "F": 56}
+HEADER_FILL = PatternFill("solid", fgColor="E7E6E6")
+SECTION_FILL = PatternFill("solid", fgColor="F2F2F2")
+
+
+def plain(text: str) -> str:
+    """Drop Markdown emphasis and code marks."""
+    return text.replace("**", "").replace("`", "").strip()
+
+
+def table_cells(line: str) -> list:
+    return [plain(cell) for cell in line.strip().strip("|").split("|")]
+
+
+def parse_review() -> dict:
+    lines = REVIEW_MD.read_text(encoding="utf-8").splitlines()
+    review = {"story": [], "questions": [], "sections": [], "assumptions": [], "notes": []}
+    part = None
+    for line in lines:
+        if line.startswith("## "):
+            part = line[3:].strip()
+            continue
+        if part == "The story as written" and line.startswith(">"):
+            review["story"].append(plain(line.lstrip("> ")))
+        elif part == "Summary" and line[:3] in {f"{n}. " for n in range(1, 10)}:
+            review["questions"].append(plain(line[3:]))
+        elif part == "Findings":
+            if line.startswith("### "):
+                review["sections"].append((line[4:].strip(), []))
+            elif line.startswith("| R-"):
+                cells = table_cells(line)
+                assert len(cells) == 6, f"finding row has {len(cells)} cells: {line[:40]}"
+                review["sections"][-1][1].append(cells)
+            elif line.startswith("**Partly answered"):
+                review["notes"].append(plain(line))
+        elif part == "Assumptions used in the test cases" and line.startswith("| A-"):
+            cells = table_cells(line)
+            assert len(cells) == 3, f"assumption row has {len(cells)} cells: {line[:40]}"
+            review["assumptions"].append(cells)
+    findings = [row for _, rows in review["sections"] for row in rows]
+    assert findings and review["assumptions"] and review["story"] and review["questions"], "review parse failed"
+    assert [row[0] for row in findings] == [f"R-{i:02d}" for i in range(1, len(findings) + 1)], "finding IDs not sequential"
+    return review
+
+
+def write_review_sheet(ws, review: dict) -> None:
+    setup_sheet(ws, REVIEW_COLS)
+    findings = [row for _, rows in review["sections"] for row in rows]
+    sev = Counter(row[3] for row in findings)
+    widths = list(REVIEW_COLS.values())
+
+    def full_row(row: int, value, bold: bool = False, fill=None, height_chars: int = 160) -> None:
+        ws.merge_cells(f"A{row}:F{row}")
+        put(ws, f"A{row}", value, bold=bold)
+        if fill:
+            ws[f"A{row}"].fill = fill
+        text = value if isinstance(value, str) else "".join(block.text for block in value)
+        ws.row_dimensions[row].height = 14 * lines_needed(text, height_chars) + 4
+
+    row = 1
+    full_row(row, "US11 — Requirements review", bold=True)
+    ws[f"A{row}"].font = Font(name=FONT, size=13, bold=True)
+    row += 1
+    full_row(row, "Story: [Draft] US11_Guest Viewing Reservation Menu (course PDF). "
+                  'Design: Figma, frame "Placing pre-order by guest | Menu". '
+                  "Status names were checked against the backend code.")
+    row += 2
+
+    full_row(row, "The story as written", bold=True, fill=SECTION_FILL)
+    row += 1
+    story = "\n".join(line for line in review["story"])
+    full_row(row, story)
+    box(ws, f"A{row}:F{row}")
+    row += 2
+
+    full_row(row, "Summary", bold=True, fill=SECTION_FILL)
+    row += 1
+    summary = rich((f"{len(findings)} findings: {sev['High']} High, {sev['Medium']} Medium, {sev['Low']} Low.", True),
+                   ("\nHigh = a core flow has no single correct expected result. "
+                    "Medium = a test needs an assumption the PO must confirm. Low = wording, format or minor edge case.", False),
+                   ("\n\nThe five questions to resolve first:", True),
+                   ("\n" + numbered(review["questions"]), False))
+    full_row(row, summary)
+    box(ws, f"A{row}:F{row}")
+    row += 2
+
+    headers = ["ID", "Where", "Type", "Severity", "Problem", "Question for the PO / suggested fix"]
+    for col, title in zip("ABCDEF", headers):
+        put(ws, f"{col}{row}", title, bold=True)
+        ws[f"{col}{row}"].fill = HEADER_FILL
+    box(ws, f"A{row}:F{row}")
+    row += 1
+    for section, rows in review["sections"]:
+        full_row(row, section, bold=True, fill=SECTION_FILL)
+        box(ws, f"A{row}:F{row}")
+        row += 1
+        for cells in rows:
+            for col, value in zip("ABCDEF", cells):
+                put(ws, f"{col}{row}", value, bold=(col == "A" or (col == "D" and value == "High")))
+            box(ws, f"A{row}:F{row}")
+            ws.row_dimensions[row].height = 14 * max(lines_needed(v, int(w * 1.1)) for v, w in zip(cells, widths)) + 4
+            row += 1
+    for note in review["notes"]:
+        full_row(row, note)
+        row += 1
+    row += 1
+
+    full_row(row, "Assumptions used in the test cases (until the PO answers)", bold=True, fill=SECTION_FILL)
+    row += 1
+    for col, title in (("A", "ID"), ("B", "Assumption"), ("F", "Linked findings")):
+        put(ws, f"{col}{row}", title, bold=True)
+    ws.merge_cells(f"B{row}:E{row}")
+    for col in "ABCDEF":
+        ws[f"{col}{row}"].fill = HEADER_FILL
+    box(ws, f"A{row}:F{row}")
+    row += 1
+    for aid, text, links in review["assumptions"]:
+        ws.merge_cells(f"B{row}:E{row}")
+        put(ws, f"A{row}", aid, bold=True)
+        put(ws, f"B{row}", text)
+        put(ws, f"F{row}", links)
+        box(ws, f"A{row}:F{row}")
+        ws.row_dimensions[row].height = 14 * lines_needed(text, 110) + 4
+        row += 1
+
+
+def write_xlsx(images: dict, review: dict) -> None:
     wb = Workbook()
-    write_tc_sheet(wb.active)
-    wb.active.title = "Test cases"
+    write_review_sheet(wb.active, review)
+    wb.active.title = "Requirements review"
+    write_tc_sheet(wb.create_sheet("Test cases"))
     write_bug_sheet(wb.create_sheet("Defect reports"), images)
     wb.save(XLSX)
 
 
 def main() -> None:
     check()
+    review = parse_review()
     images = {bug["key"]: bug_image(bug) for bug in BUGS}
     write_test_cases_md()
     write_defects_md()
-    write_xlsx(images)
+    write_xlsx(images, review)
     counts = Counter(tc["status"] for tc in TEST_CASES)
-    print(f"{len(TEST_CASES)} test cases ({dict(counts)}), {len(BUGS)} defects -> {ROOT.name}")
+    findings = sum(len(rows) for _, rows in review["sections"])
+    print(f"{findings} findings, {len(TEST_CASES)} test cases ({dict(counts)}), {len(BUGS)} defects -> {ROOT.name}")
 
 
 if __name__ == "__main__":
