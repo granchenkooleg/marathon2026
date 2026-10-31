@@ -13,6 +13,29 @@ const reporters: ReporterDescription[] = [
   ['json', { outputFile: 'reports/results.json' }],
 ];
 
+// Report Portal is opt-in: it is used only when all three variables are set (see README, "Report Portal").
+const reportPortalEnabled = !!(process.env.RP_ENDPOINT && process.env.RP_API_KEY && process.env.RP_PROJECT);
+if (reportPortalEnabled) {
+  const trigger = process.env.CODEBUILD_BUILD_ID ? 'aws-codebuild' : process.env.GITHUB_ACTIONS ? 'github-actions' : 'local';
+  reporters.push([
+    '@reportportal/agent-js-playwright',
+    {
+      endpoint: process.env.RP_ENDPOINT,
+      apiKey: process.env.RP_API_KEY,
+      project: process.env.RP_PROJECT,
+      launch: process.env.RP_LAUNCH || 'green-tasty-e2e',
+      description: `E2E run ${process.env.AQA_RUN_ID} against ${env.baseUrl}`,
+      attributes: [
+        { key: 'trigger', value: trigger },
+        { key: 'run', value: process.env.AQA_RUN_ID },
+      ],
+      includeTestSteps: true,
+      uploadTrace: true,
+      uploadVideo: true,
+    },
+  ]);
+}
+
 export default defineConfig({
   testDir: './tests',
   outputDir: './test-results',

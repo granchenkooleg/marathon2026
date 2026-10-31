@@ -4,6 +4,7 @@
 Чому не Напрям 1: мій груповий pre-order з ДЗ #6 працює на моках, а ендпоінтів групового pre-order (`GET /guest/groups/{id}/sessions`, submit) у розгорнутому бекенді немає.
 
 **Підхід:** Playwright Test (TypeScript), **Page Object Model + API-клієнт + fixtures**, без BDD.
+**⭐:** звіти в Report Portal (перевірено локально) і пайплайн в AWS CodeBuild через Terraform ([розділ нижче](#-report-portal-і-пайплайн-в-aws)).
 Чому так:
 - одна мова з фронтендом застосунку (TypeScript);
 - trace, відео, скриншоти, HTML-звіт, теги, паралельність і retries уже вбудовані, без додаткових бібліотек;
@@ -93,6 +94,65 @@ Workflow: [`.github/workflows/e2e.yml`](../.github/workflows/e2e.yml). Запу�
 3. публікує таблицю результатів у **Summary** запуску;
 4. вивантажує артефакти `playwright-html-report` і `failure-evidence` (trace, відео, скриншоти), зберігаються 14 днів;
 5. наприкінці позначає job червоним, якщо були неочікувані падіння.
+
+---
+
+## ⭐ Report Portal і пайплайн в AWS
+
+### Report Portal
+
+Репортер `@reportportal/agent-js-playwright` вмикається, лише коли задано всі три змінні: `RP_ENDPOINT`, `RP_PROJECT`, `RP_API_KEY`. Без них запуск працює як завжди. Теги тестів (`@L1`, `@ui`, `@known-defect` …) потрапляють у Report Portal як атрибути `tag:…`. Запуск має атрибути `trigger` (local / github-actions / aws-codebuild) і `run` (id запуску). До впалого тесту прикріплюються скриншот, відео, trace і error context. Перевірено окремим навмисно впалим тестом; known-defect тести вважаються пройденими, тому отримують лише error context.
+
+Локально (Docker, ~6 ГБ RAM):
+
+```bash
+curl -LO https://raw.githubusercontent.com/reportportal/reportportal/master/docker-compose.yml
+docker compose -p reportportal up -d
+```
+
+1. Відкрити http://localhost:8080 і увійти як `superadmin` / `erebus` (стандартні дані локального Report Portal).
+2. **Profile → API Keys → Generate**.
+3. Додати ключ у `aqa/.env`:
+
+```bash
+RP_ENDPOINT=http://localhost:8080/api/v1
+RP_PROJECT=superadmin_personal
+RP_API_KEY=<згенерований ключ>
+```
+
+4. `npm test` — після запуску в консолі з'явиться посилання на launch.
+
+Перевірено 31.10.2026 на Report Portal 5.15: launch `green-tasty-e2e-verify`, 113 / 113 passed, з атрибутами запуску й тегами тестів:
+
+![Launch у Report Portal](docs/report-portal-launch.png)
+
+У GitHub Actions той самий репортер вмикається змінними `RP_ENDPOINT`, `RP_PROJECT` і секретом `RP_API_KEY`. Report Portal має бути доступний з інтернету: локальний Docker-інстанс із GitHub не видно.
+
+### Пайплайн в AWS CodeBuild
+
+Terraform: [`infra/terraform/codebuild_e2e.tf`](../infra/terraform/codebuild_e2e.tf). Кроки збірки: [`aqa/buildspec.yml`](buildspec.yml). Ресурси **opt-in** (`e2e_enabled = false` за замовчуванням), тому звичайний `terraform apply` інфраструктури нічого не змінює.
+
+| Ресурс | Навіщо |
+|---|---|
+| `aws_codebuild_project.e2e` (`restaurant-e2e`) | Клонує публічний репозиторій без GitHub-креденшалів (`NO_SOURCE` + `git clone`), ставить Chromium, запускає тести (`BUILD_GENERAL1_MEDIUM`, 4 workers) |
+| CodeBuild report group `restaurant-e2e-junit` | Результати тестів у консолі CodeBuild (JUnit), історія запусків |
+| S3 `restaurant-e2e-reports-<account>` | HTML-звіт, trace, відео, скриншоти: `runs/<build-id>/e2e/`, зберігаються 14 днів |
+| CloudWatch log group | Логи збірки, 14 днів |
+| IAM role | Лише логи, свій бакет, свої report groups і (за потреби) один SSM-параметр |
+| `aws_scheduler_schedule.e2e` (опційно) | Регулярний регрес за `e2e_schedule_expression`, як `weekly_reports` |
+
+```bash
+cd infra/terraform
+terraform apply -var e2e_enabled=true \
+  -var 'e2e_api_url=https://<api-id>.execute-api.us-west-2.amazonaws.com/develop'
+aws codebuild start-build --project-name restaurant-e2e
+```
+
+`BASE_URL` за замовчуванням — CloudFront-дистрибуція з цього ж стеку. Report Portal для CodeBuild: ключ кладеться в SSM (`aws ssm put-parameter --type SecureString --name /restaurant/e2e/rp-api-key --value <key>`), а в Terraform задаються `e2e_report_portal_endpoint`, `e2e_report_portal_project`, `e2e_report_portal_api_key_parameter`.
+
+Як і в GitHub Actions, впалий тест не зупиняє публікацію: фаза `build` стає FAILED, але CodeBuild однаково вивантажує report group і артефакти.
+
+**Що перевірено, а що ні:** `terraform validate` і `terraform fmt` проходять (AWS provider 5.100). Кроки buildspec ті самі, що в GitHub Actions. **Сам `terraform apply` і запуск у CodeBuild я не виконував:** для цього потрібен доступ до AWS-акаунту.
 
 ---
 
@@ -209,4 +269,8 @@ aqa/
   tests/l1/                 # реєстрація, вхід, меню
   tests/l2/                 # бронювання: UI, правила, доступ, доступність
   scripts/ci-summary.mjs    # таблиця результатів для GitHub Summary
+  buildspec.yml             # кроки збірки для AWS CodeBuild (⭐)
+  docs/                     # скриншот Report Portal
+infra/terraform/codebuild_e2e.tf   # ⭐ CodeBuild-пайплайн (opt-in)
+.github/workflows/e2e.yml          # GitHub Actions
 ```

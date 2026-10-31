@@ -1,0 +1,39 @@
+# AWS CodeBuild build steps for the E2E suite (project: infra/terraform/codebuild_e2e.tf).
+# The project uses NO_SOURCE and inlines this file, so the first step clones the public repo.
+# E2E_REPOSITORY_URL, E2E_SOURCE_VERSION, BASE_URL, API_URL (and optionally RP_*) come from the project.
+version: 0.2
+
+env:
+  variables:
+    CI: "true"
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - git clone --depth 1 --branch "$E2E_SOURCE_VERSION" "$E2E_REPOSITORY_URL" "$CODEBUILD_SRC_DIR/e2e-src"
+      - cd "$CODEBUILD_SRC_DIR/e2e-src/aqa"
+      - npm ci
+      - npx playwright install --with-deps chromium
+
+  build:
+    commands:
+      - cd "$CODEBUILD_SRC_DIR/e2e-src/aqa"
+      - npm run typecheck
+      # A failing test fails this phase, but CodeBuild still uploads the reports and artifacts below,
+      # so the pipeline always publishes its results.
+      - npx playwright test
+
+reports:
+  junit: # CodeBuild names the report group "<project>-junit"
+    base-directory: e2e-src/aqa/reports
+    files:
+      - junit.xml
+    file-format: JUNITXML
+
+artifacts:
+  files:
+    - e2e-src/aqa/reports/**/*
+    - e2e-src/aqa/test-results/**/*
+  discard-paths: no

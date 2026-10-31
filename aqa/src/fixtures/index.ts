@@ -60,6 +60,8 @@ async function removeLocation(owner: Session, location: Location): Promise<strin
 }
 
 type TestFixtures = {
+  /** Auto fixture: sends the test's tags (@L1, @ui, @known-defect …) to Report Portal as attributes. */
+  reportPortalTags: void;
   /** Anonymous API client; calls go through the test's request context, so they appear in the trace. */
   api: ApiClient;
   /** Fresh customer for this test. All of their active reservations are cancelled after the test. */
@@ -108,6 +110,17 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       if (problem) console.warn(`[cleanup] ${problem}`);
     },
     { scope: 'worker' },
+  ],
+
+  reportPortalTags: [
+    async ({}, use, testInfo) => {
+      if (process.env.RP_API_KEY && testInfo.tags.length) {
+        const attributes = testInfo.tags.map((tag) => ({ key: 'tag', value: tag.replace(/^@/, '') }));
+        testInfo.annotations.push({ type: 'rp:addAttributes', description: JSON.stringify(attributes) });
+      }
+      await use();
+    },
+    { auto: true },
   ],
 
   api: async ({ request }, use) => use(new ApiClient(request, env.apiUrl)),

@@ -34,6 +34,10 @@ jobs:
       BASE_URL: ${{ vars.BASE_URL }}
       API_URL: ${{ vars.API_URL }}
       GREP: ${{ inputs.grep }}
+      # Optional Report Portal (must be reachable from GitHub runners); unset = disabled.
+      RP_ENDPOINT: ${{ vars.RP_ENDPOINT }}
+      RP_PROJECT: ${{ vars.RP_PROJECT }}
+      RP_API_KEY: ${{ secrets.RP_API_KEY }}
     steps:
       - uses: actions/checkout@v4
 
