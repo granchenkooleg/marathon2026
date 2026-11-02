@@ -2,10 +2,10 @@
 
 Restaurant booking app from EPAM IT Marathon 2026, deployed to my own AWS account.
 
-## Live instance (deployed 2026-10-26)
+## Live instance (deployed 2026-10-26, updated 2026-11-02)
 
 - **Frontend**: https://d1cuqmer7awnbz.cloudfront.net/main
-- **Backend API**: https://9877dqd8v8.execute-api.us-west-2.amazonaws.com/develop (later updated with the HW #5 endpoints)
+- **Backend API**: https://9877dqd8v8.execute-api.us-west-2.amazonaws.com/develop
 - **AWS account**: 325877452779 (us-west-2)
 - **Source**: https://github.com/granchenkooleg/marathon2026 (public)
 
@@ -14,8 +14,8 @@ Restaurant booking app from EPAM IT Marathon 2026, deployed to my own AWS accoun
 | # | Homework | Result | Where |
 |---|---|---|---|
 | 4 | DevOps: deployment | Terraform infrastructure, backend with AWS Syndicate, Angular on a private S3 bucket behind CloudFront (HTTPS). Live links above. | [Deployment Guide](#deployment-guide) below, `infra/terraform` |
-| 5 | Backend (.NET): Owner group pre-order | Levels 1–3: `GET /guest/groups/{id}/sessions`, `GET /reservations/{id}/guest-session-id`, `POST /group-reservations/{id}/submit`, `DELETE /guest/groups/{id}/sessions/{guestSessionId}`. Unit tests in `backend/restaurant-backend-app/Tests`. The routes are deployed to the live API and require a Cognito token. | [PR #1](https://github.com/granchenkooleg/marathon2026/pull/1) (verification), [spec](homework-backend.md) |
-| 6 | Frontend: Owner group pre-order screen | Practice, levels 1–3 and the Remove Guest bonus; 67/67 homework tests. Checked on mocks; not yet connected to this deployment. | [epam-hw6-owner-preorder](https://github.com/granchenkooleg/epam-hw6-owner-preorder) |
+| 5 | Backend (.NET): Owner group pre-order | Levels 1–3: `GET /guest/groups/{id}/sessions`, `GET /reservations/{id}/guest-session-id`, `POST /group-reservations/{id}/submit`, `DELETE /guest/groups/{id}/sessions/{guestSessionId}`. Unit tests in `backend/restaurant-backend-app/Tests`. Deployed; the routes require a Cognito token. Follow-up found while connecting HW #6: the Owner-session response also returns `groupReservationId`, submit adds the guests' dishes to the Owner's order instead of replacing it, and a repeat submit is rejected. | [PR #1](https://github.com/granchenkooleg/marathon2026/pull/1), [PR #5](https://github.com/granchenkooleg/marathon2026/pull/5), [spec](homework-backend.md) |
+| 6 | Frontend: Owner group pre-order screen | Practice, levels 1–3 and the Remove Guest bonus. Part of this app and deployed: **Group Pre-Order** on a reservation card with 2+ guests opens the screen. Checked live against the deployed API on 2026-11-02: open group, full group, submit, reload after submit, order contents. | `frontend/restaurant-frontend-app/src/app/pages/group-order-page/`, [PR #5](https://github.com/granchenkooleg/marathon2026/pull/5); first version: [epam-hw6-owner-preorder](https://github.com/granchenkooleg/epam-hw6-owner-preorder) |
 | 7 | Manual QA: US11 Guest Viewing Reservation Menu | 35 requirement findings, 30 test cases (3 passed, 8 failed, 19 not run), 8 defect reports with screenshots, course-template workbook. | [`qa/hw7-us11-guest-menu/`](qa/hw7-us11-guest-menu/README.md) |
 | 8 | Test automation | Direction 2, levels 1–2: 113 E2E UI + API tests (Playwright + TypeScript), GitHub Actions CI; ⭐ Report Portal and an AWS CodeBuild pipeline. | [`aqa/`](aqa/README.md) |
 
