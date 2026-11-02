@@ -25,8 +25,8 @@ public class GetOwnerGuestSessionIdHandler(IGuestSessionService guestSessionServ
 
         try
         {
-            string guestSessionId = await guestSessionService.GetOrCreateOwnerGuestSessionIdAsync(userId, reservationId);
-            return ResponseBuilder.CreateJsonResponse(200, new GetOwnerGuestSessionIdResponse(guestSessionId));
+            GetOwnerGuestSessionIdResponse ownerSession = await guestSessionService.GetOrCreateOwnerGuestSessionIdAsync(userId, reservationId);
+            return ResponseBuilder.CreateJsonResponse(200, ownerSession);
         }
         catch (ReservationNotFoundException ex)
         {

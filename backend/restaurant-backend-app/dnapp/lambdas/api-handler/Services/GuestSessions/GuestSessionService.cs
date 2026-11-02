@@ -330,7 +330,7 @@ public class GuestSessionService(
         return new GetAllSessionsResponse(participants, participants.Sum(p => p.Total));
     }
 
-    public async Task<string> GetOrCreateOwnerGuestSessionIdAsync(string userId, string reservationId)
+    public async Task<GetOwnerGuestSessionIdResponse> GetOrCreateOwnerGuestSessionIdAsync(string userId, string reservationId)
     {
         var reservation = await reservationRepository.GetReservationByIdAsync(reservationId)
             ?? throw new ReservationNotFoundException($"Reservation '{reservationId}' not found.");
@@ -343,7 +343,7 @@ public class GuestSessionService(
         var sessions = await guestSessionRepository.GetAllByGroupReservationIdAsync(group.GroupReservationId);
         var existingOwnerSession = sessions.FirstOrDefault(s => s.IsOwnerSession);
         if (existingOwnerSession is not null)
-            return existingOwnerSession.Id;
+            return new GetOwnerGuestSessionIdResponse(existingOwnerSession.Id, group.GroupReservationId);
 
         var ownerSession = new GuestSession()
         {
@@ -357,7 +357,7 @@ public class GuestSessionService(
 
         await guestSessionRepository.SaveAsync(ownerSession);
 
-        return ownerSession.Id;
+        return new GetOwnerGuestSessionIdResponse(ownerSession.Id, group.GroupReservationId);
     }
 
     public async Task<IEnumerable<ConsolidatedOrderItemResponse>> SubmitConsolidatedPreOrderAsync(string userId, string groupReservationId, string reservationId)
@@ -369,6 +369,13 @@ public class GuestSessionService(
 
         var group = await groupReservationRepository.GetGroupReservationByIdAsync(groupReservationId)
             ?? throw new GroupReservationNotFoundException();
+
+        // Without this, the owner of one reservation could submit another reservation's group.
+        if (group.ReservationId != reservationId)
+            throw new ValidationException("Group reservation does not belong to this reservation.");
+
+        // A repeated submit must not add the guests' dishes to the order a second time.
+        ValidateGroupReservation(group);
 
         var sessions = await guestSessionRepository.GetAllByGroupReservationIdAsync(groupReservationId);
         var submittedSessions = sessions.Where(s => s.IsSubmitted).ToList();
@@ -393,8 +400,15 @@ public class GuestSessionService(
         var order = await orderRepository.GetOrderByReservationIdAsync(reservationId)
             ?? throw new OrderNotFoundException($"Order for reservation '{reservationId}' not found.");
 
-        order.Dishes.Clear();
-        order.Dishes.AddRange(mergedDishes);
+        // The spec says "add them to the order": keep the Owner's own pre-order and add the guests' dishes to it.
+        foreach (var dish in mergedDishes)
+        {
+            var existing = order.Dishes.FirstOrDefault(d => d.DishId == dish.DishId);
+            if (existing is null)
+                order.Dishes.Add(dish);
+            else
+                existing.Quantity += dish.Quantity;
+        }
         order.Status = OrderStatus.SubmittedByCustomer;
         await orderRepository.SaveOrderAsync(order);
 
