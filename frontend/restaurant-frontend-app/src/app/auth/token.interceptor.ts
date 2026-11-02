@@ -21,9 +21,25 @@ export const tokenInterceptor: HttpInterceptorFn = (
   // Guest flow uses a different token (guest session token) and we must not touch the body.
   // Otherwise we break POST /guest/sessions payload.
   if (req.url.includes('/guest/')) {
-    return next(req).pipe(
+    // Exception: the Owner-only group routes (GET/DELETE /guest/groups/{id}/sessions) sit behind
+    // the Cognito authorizer, so they get the signed-in Owner's token. Only a header is added, and
+    // only when the request has none; the body is never touched.
+    const ownerTokens =
+      req.url.includes('/guest/groups/') && !req.headers.has('Authorization')
+        ? inject(AuthenticationService).getTokens()
+        : null;
+    const guestRequest = ownerTokens?.idToken
+      ? req.clone({ setHeaders: { Authorization: 'Bearer ' + ownerTokens.idToken } })
+      : req;
+
+    return next(guestRequest).pipe(
       catchError((error: HttpErrorResponse) => {
         console.log(error);
+
+        // Тихі запити (фонова синхронізація Owner-екрана теж ходить на /guest/...): без toast.
+        if (req.context.get(SKIP_ERROR_TOAST)) {
+          return throwError(() => error);
+        }
 
         let errorMessage = 'An unexpected error occurred.';
         if (error.error && typeof error.error === 'string') {

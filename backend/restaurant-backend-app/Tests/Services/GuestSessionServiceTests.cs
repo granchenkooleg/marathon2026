@@ -840,12 +840,13 @@ public class GuestSessionServiceTests
             .Setup(r => r.SaveAsync(It.IsAny<GuestSession>()))
             .Callback<GuestSession>(s => savedSession = s);
 
-        string sessionId = await _guestSessionService.GetOrCreateOwnerGuestSessionIdAsync(userId, reservation.Id);
+        var response = await _guestSessionService.GetOrCreateOwnerGuestSessionIdAsync(userId, reservation.Id);
 
         Assert.NotNull(savedSession);
         Assert.True(savedSession!.IsOwnerSession);
         Assert.Equal(userId, savedSession.OwnerUserId);
-        Assert.Equal(sessionId, savedSession.Id);
+        Assert.Equal(response.GuestSessionId, savedSession.Id);
+        Assert.Equal(groupReservation.GroupReservationId, response.GroupReservationId);
     }
 
     [Theory]
@@ -873,9 +874,10 @@ public class GuestSessionServiceTests
             .Setup(r => r.GetAllByGroupReservationIdAsync(groupReservation.GroupReservationId))
             .ReturnsAsync([existingOwnerSession]);
 
-        string sessionId = await _guestSessionService.GetOrCreateOwnerGuestSessionIdAsync(userId, reservation.Id);
+        var response = await _guestSessionService.GetOrCreateOwnerGuestSessionIdAsync(userId, reservation.Id);
 
-        Assert.Equal(existingOwnerSession.Id, sessionId);
+        Assert.Equal(existingOwnerSession.Id, response.GuestSessionId);
+        Assert.Equal(groupReservation.GroupReservationId, response.GroupReservationId);
         _mockGuestSessionRepository.Verify(r => r.SaveAsync(It.IsAny<GuestSession>()), Times.Never);
     }
 
@@ -952,8 +954,13 @@ public class GuestSessionServiceTests
         notSubmittedSession.GroupReservationId = groupReservation.GroupReservationId;
         notSubmittedSession.Dishes = [new OrderItem { DishId = "ignored-dish", Quantity = 5 }];
 
+        // The Owner's own pre-order: one dish of their own and one the guests also chose.
         order.ReservationId = reservation.Id;
-        order.Dishes = [];
+        order.Dishes =
+        [
+            new OrderItem { DishId = "owner-dish", Quantity = 1 },
+            new OrderItem { DishId = dishId, Quantity = 1 },
+        ];
 
         _mockReservationRepository
             .Setup(r => r.GetReservationByIdAsync(reservation.Id))
@@ -973,13 +980,67 @@ public class GuestSessionServiceTests
 
         var result = (await _guestSessionService.SubmitConsolidatedPreOrderAsync(userId, groupReservation.GroupReservationId, reservation.Id)).ToList();
 
+        // Response: the guests' consolidated dishes only.
         Assert.Single(result);
         Assert.Equal(dishId, result[0].DishId);
         Assert.Equal(3, result[0].Quantity);
+
+        // Order: the Owner's dishes stay, the guests' dishes are added to them.
+        Assert.Equal(2, order.Dishes.Count);
+        Assert.Equal(1, order.Dishes.Single(d => d.DishId == "owner-dish").Quantity);
+        Assert.Equal(4, order.Dishes.Single(d => d.DishId == dishId).Quantity);
+        Assert.DoesNotContain(order.Dishes, d => d.DishId == "ignored-dish");
+
         Assert.Equal(OrderStatus.SubmittedByCustomer, order.Status);
         Assert.Equal(GroupReservationStatus.Submitted, groupReservation.Status);
         _mockOrderRepository.Verify(r => r.SaveOrderAsync(order), Times.Once);
         _mockGroupReservationRepository.Verify(r => r.SaveGroupReservationAsync(groupReservation), Times.Once);
+    }
+
+    [Theory]
+    [AutoData]
+    public async Task SubmitConsolidatedPreOrderAsync_GroupAlreadySubmitted_ThrowsAndDoesNotChangeOrder(
+        Reservation reservation, GroupReservation groupReservation, string userId)
+    {
+        reservation.CustomerId = userId;
+        groupReservation.ReservationId = reservation.Id;
+        groupReservation.Status = GroupReservationStatus.Submitted;
+
+        _mockReservationRepository
+            .Setup(r => r.GetReservationByIdAsync(reservation.Id))
+            .ReturnsAsync(reservation);
+
+        _mockGroupReservationRepository
+            .Setup(r => r.GetGroupReservationByIdAsync(groupReservation.GroupReservationId))
+            .ReturnsAsync(groupReservation);
+
+        await Assert.ThrowsAsync<GroupReservationSubmittedException>(() =>
+            _guestSessionService.SubmitConsolidatedPreOrderAsync(userId, groupReservation.GroupReservationId, reservation.Id));
+
+        _mockOrderRepository.Verify(r => r.SaveOrderAsync(It.IsAny<Order>()), Times.Never);
+    }
+
+    [Theory]
+    [AutoData]
+    public async Task SubmitConsolidatedPreOrderAsync_GroupOfAnotherReservation_ThrowsValidation(
+        Reservation reservation, GroupReservation otherGroup, string userId, string otherReservationId)
+    {
+        reservation.CustomerId = userId;
+        otherGroup.ReservationId = otherReservationId;
+        otherGroup.Status = GroupReservationStatus.Open;
+
+        _mockReservationRepository
+            .Setup(r => r.GetReservationByIdAsync(reservation.Id))
+            .ReturnsAsync(reservation);
+
+        _mockGroupReservationRepository
+            .Setup(r => r.GetGroupReservationByIdAsync(otherGroup.GroupReservationId))
+            .ReturnsAsync(otherGroup);
+
+        await Assert.ThrowsAsync<ValidationException>(() =>
+            _guestSessionService.SubmitConsolidatedPreOrderAsync(userId, otherGroup.GroupReservationId, reservation.Id));
+
+        _mockGroupReservationRepository.Verify(r => r.SaveGroupReservationAsync(It.IsAny<GroupReservation>()), Times.Never);
     }
 
     [Theory]
@@ -989,6 +1050,7 @@ public class GuestSessionServiceTests
     {
         reservation.CustomerId = userId;
         groupReservation.ReservationId = reservation.Id;
+        groupReservation.Status = GroupReservationStatus.Open;
         session.IsSubmitted = false;
         session.GroupReservationId = groupReservation.GroupReservationId;
 
@@ -1015,6 +1077,7 @@ public class GuestSessionServiceTests
     {
         reservation.CustomerId = userId;
         groupReservation.ReservationId = reservation.Id;
+        groupReservation.Status = GroupReservationStatus.Open;
         session.IsSubmitted = true;
         session.GroupReservationId = groupReservation.GroupReservationId;
         session.Dishes = [];
@@ -1042,6 +1105,7 @@ public class GuestSessionServiceTests
     {
         reservation.CustomerId = userId;
         groupReservation.ReservationId = reservation.Id;
+        groupReservation.Status = GroupReservationStatus.Open;
         session.IsSubmitted = true;
         session.GroupReservationId = groupReservation.GroupReservationId;
         session.Dishes = [new OrderItem { DishId = dishId, Quantity = 1 }];
