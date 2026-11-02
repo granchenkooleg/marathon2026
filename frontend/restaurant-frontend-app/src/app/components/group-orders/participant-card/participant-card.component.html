@@ -1,0 +1,46 @@
+<article class="card">
+  <header class="card-header">
+    <h2 class="title">{{ title() }}</h2>
+
+    <!-- статус текстом, не лише кольором -->
+    @if (participant().isSubmitted) {
+      <span class="chip chip--submitted">Submitted</span>
+    } @else {
+      <span class="chip chip--pending">Still choosing</span>
+    }
+
+    @if (canRemove()) {
+      <button
+        type="button"
+        class="button button--tertiary button--small remove"
+        [attr.aria-label]="removeLabel()"
+        (click)="onRemove()"
+      >
+        Remove Guest
+      </button>
+    }
+  </header>
+
+  @if (rows().length) {
+    <ul class="items">
+      @for (row of rows(); track row.dishId) {
+        <li class="item">
+          @if (row.imageUrl) {
+            <img class="avatar" [src]="row.imageUrl" alt="" width="40" height="40" loading="lazy" />
+          } @else {
+            <span class="avatar avatar--initial" aria-hidden="true">{{ row.initial }}</span>
+          }
+          <p class="name">{{ row.name }}</p>
+          <p class="qty">× {{ row.quantity }}</p>
+          <p class="price">{{ row.lineTotal | currency }}</p>
+        </li>
+      }
+    </ul>
+  } @else {
+    <p class="empty">No dishes yet</p>
+  }
+
+  <p class="subtotal">
+    <span>Subtotal</span><span>{{ participant().total | currency }}</span>
+  </p>
+</article>

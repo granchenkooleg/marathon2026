@@ -8,7 +8,7 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { Params, Router } from '@angular/router';
+import { Params, Router, RouterLink } from '@angular/router';
 
 import { CreateOrderRequest } from '@app/models/cart/create-order-request.model';
 import {
@@ -38,6 +38,7 @@ interface WaiterPreOrderNavigationData {
     DatePipe,
     CustomSelectComponent,
     PlaceOrderWaiterComponent,
+    RouterLink,
   ],
   templateUrl: './card-reservation.component.html',
   styleUrl: './card-reservation.component.scss',
@@ -135,6 +136,9 @@ export class CardReservationComponent {
       this.creatorRole() === Roles.WAITER
     );
   });
+
+  /** Груповий pre-order є лише в бронювання на 2+ гостей. */
+  readonly hasGroupPreOrder = computed(() => this.r().guestCount >= 2);
 
   readonly isAnonymous = computed(() => {
     return !this.r().customerId;
