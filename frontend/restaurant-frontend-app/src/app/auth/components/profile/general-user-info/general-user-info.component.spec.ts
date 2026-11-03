@@ -49,7 +49,12 @@ describe('GeneralInformationComponent', () => {
   let images: HTMLImageElement[];
 
   let readerResults: WeakMap<FileReader, string>;
+  let originalFileReader: typeof FileReader;
   let readerStates: WeakMap<FileReader, FileReader['readyState']>;
+
+  afterEach(() => {
+    window.FileReader = originalFileReader;
+  });
 
   beforeEach(async () => {
     auth = {
@@ -80,30 +85,47 @@ describe('GeneralInformationComponent', () => {
     readerResults = new WeakMap();
     readerStates = new WeakMap();
 
-    // Control callbacks without reading or decoding real files.
-    spyOnProperty(FileReader.prototype, 'result', 'get')
-      .and.callFake(function (this: FileReader) {
-      return readerResults.get(this) ?? null;
-    });
+    // Control callbacks without reading or decoding real files. Chrome's FileReader accessors are
+    // not configurable, so the global FileReader is swapped for a fake with the same surface.
+    class FakeFileReader {
+      static readonly EMPTY = 0;
+      static readonly LOADING = 1;
+      static readonly DONE = 2;
+      onload: FileReader['onload'] = null;
+      onerror: FileReader['onerror'] = null;
 
-    spyOnProperty(FileReader.prototype, 'readyState', 'get')
-      .and.callFake(function (this: FileReader) {
-      return readerStates.get(this) ?? FileReader.EMPTY;
-    });
+      get result(): string | null {
+        return readerResults.get(this as unknown as FileReader) ?? null;
+      }
+
+      get readyState(): FileReader['readyState'] {
+        return readerStates.get(this as unknown as FileReader) ?? FileReader.EMPTY;
+      }
+
+      readAsDataURL(_file: Blob): void {
+        // replaced by the spy below
+      }
+
+      abort(): void {
+        // replaced by the spy below
+      }
+    }
+    originalFileReader = window.FileReader;
+    (window as unknown as { FileReader: unknown }).FileReader = FakeFileReader;
 
     readSpy = spyOn(
-      FileReader.prototype,
+      FakeFileReader.prototype,
       'readAsDataURL',
-    ).and.callFake(function (this: FileReader) {
-      readers.push(this);
-      readerStates.set(this, FileReader.LOADING);
+    ).and.callFake(function (this: FakeFileReader) {
+      readers.push(this as unknown as FileReader);
+      readerStates.set(this as unknown as FileReader, FileReader.LOADING);
     });
 
     abortSpy = spyOn(
-      FileReader.prototype,
+      FakeFileReader.prototype,
       'abort',
-    ).and.callFake(function (this: FileReader) {
-      readerStates.set(this, FileReader.DONE);
+    ).and.callFake(function (this: FakeFileReader) {
+      readerStates.set(this as unknown as FileReader, FileReader.DONE);
     });
 
     spyOnProperty(
@@ -184,11 +206,9 @@ describe('GeneralInformationComponent', () => {
   function completeImage(width = 200, height = 200): void {
     const image = images[images.length - 1];
 
-    spyOnProperty(image, 'naturalWidth', 'get')
-      .and.returnValue(width);
-
-    spyOnProperty(image, 'naturalHeight', 'get')
-      .and.returnValue(height);
+    // naturalWidth/Height live on the prototype; define them on this image only.
+    Object.defineProperty(image, 'naturalWidth', { configurable: true, get: () => width });
+    Object.defineProperty(image, 'naturalHeight', { configurable: true, get: () => height });
 
     image.onload?.call(image, new Event('load'));
   }
