@@ -1,6 +1,26 @@
-import { addMinutesIso, findClosestDuration, minutesBetween } from './date-helpers';
+import { addMinutesIso, findClosestDuration, minutesBetween, revertFormatTime } from './date-helpers';
 
 describe('date-helpers', () => {
+  describe('revertFormatTime', () => {
+    afterEach(() => jasmine.clock().uninstall());
+
+    // Defect D10: on the 29th–31st the result moved to a later month.
+    const cases: { today: Date; day: string; time: string; expected: Date }[] = [
+      { today: new Date(2026, 0, 31, 9), day: '2026-02-10T12:00:00', time: '14:30', expected: new Date(2026, 1, 10, 14, 30) },
+      { today: new Date(2026, 2, 31, 9), day: '2026-04-15T12:00:00', time: '09:00', expected: new Date(2026, 3, 15, 9, 0) },
+      { today: new Date(2026, 9, 29, 9), day: '2026-02-28T12:00:00', time: '18:45', expected: new Date(2026, 1, 28, 18, 45) },
+      { today: new Date(2026, 5, 15, 9), day: '2026-06-20T12:00:00', time: '10:15', expected: new Date(2026, 5, 20, 10, 15) },
+    ];
+
+    for (const { today, day, time, expected } of cases) {
+      it(`keeps ${day.slice(0, 10)} ${time} when today is ${today.toDateString()}`, () => {
+        jasmine.clock().install();
+        jasmine.clock().mockDate(today);
+        expect(revertFormatTime(time, day)).toBe(expected.toISOString());
+      });
+    }
+  });
+
   describe('addMinutesIso', () => {
     const cases: { name: string; input: string; minutes: number; expected: string }[] = [
       {

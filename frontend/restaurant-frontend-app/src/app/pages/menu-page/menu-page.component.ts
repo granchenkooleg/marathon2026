@@ -42,6 +42,10 @@ export class MenuPageComponent implements OnInit {
 
   selectedCategory: DishType | null = null; // initially show all
   selectedSort: DishSort = DishSort.PopularityDescending;
+  /** Text in the search box; filters the loaded dishes by name (defect D5: the menu had no search). */
+  searchTerm = '';
+  /** Dish to open after loading, from ?dish=<id> (the main page links popular dishes here, defect D4). */
+  private dishToOpen: string | null = null;
 
   private readonly dishesService = inject(DishesService);
   private readonly route = inject(ActivatedRoute);
@@ -64,6 +68,7 @@ export class MenuPageComponent implements OnInit {
 
       const category = params['category'] as DishType;
       const sort = params['sort'] as DishSort;
+      this.dishToOpen = params['dish'] ?? null;
 
       this.selectedCategory =
         category && Object.values(DishType).includes(category) ? category : null;
@@ -95,8 +100,27 @@ export class MenuPageComponent implements OnInit {
         vitamins: dish.vitamins || '0',
       }));
 
-      this.filteredDishes = this.dishes;
+      this.applySearch();
+      this.openRequestedDish();
     });
+  }
+
+  onSearch(event: Event): void {
+    this.searchTerm = (event.target as HTMLInputElement).value;
+    this.applySearch();
+  }
+
+  private applySearch(): void {
+    const term = this.searchTerm.trim().toLowerCase();
+    this.filteredDishes = term
+      ? this.dishes.filter((dish) => dish.name.toLowerCase().includes(term))
+      : this.dishes;
+  }
+
+  private openRequestedDish(): void {
+    if (!this.dishToOpen) return;
+    const dish = this.dishes.find((item) => item.id === this.dishToOpen);
+    if (dish) this.selectedDish = dish;
   }
 
   onCategorySelected(category: DishType): void {
@@ -136,6 +160,16 @@ export class MenuPageComponent implements OnInit {
 
   closeModal() {
     this.selectedDish = null;
+    if (this.dishToOpen) {
+      // Closing the dish opened from the main page drops ?dish, so a reload does not reopen it.
+      this.dishToOpen = null;
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { dish: null },
+        queryParamsHandling: 'merge',
+        replaceUrl: true,
+      });
+    }
   }
 
   addDishToCart(dish: DishListResponse): void {

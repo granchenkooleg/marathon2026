@@ -38,3 +38,16 @@
   border: 1px solid color.$blue-400 !important;
   color: color.$blue-400 !important;
 }
+
+// Hidden visually, still read by screen readers (labels for icon-only or placeholder-only fields).
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
