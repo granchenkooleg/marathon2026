@@ -3,13 +3,15 @@ import { ApiClient, errorText } from '../api/api-client';
 import { locationsApi, reservationsApi, tablesApi, waitersApi } from '../api/endpoints';
 import { ReservationStatus, type Location, type Table } from '../api/models';
 import { env } from '../config/env';
-import { locationAddress, newUser } from '../data/test-data';
+import { locationAddress, newUser, type UserData } from '../data/test-data';
 import { cancelReservationQuietly } from '../support/reservation-cleanup';
 import { registerAndSignIn, type Session } from '../support/sessions';
 
 export interface TestLocation {
   location: Location;
   waiterEmail: string;
+  /** The waiter assigned to this location; sign in with it to see the location's orders. */
+  waiter: UserData;
 }
 
 /** Creates tables inside the worker's location; each test books only its own tables. */
@@ -50,7 +52,7 @@ async function createLocationWithWaiter(api: ApiClient, label: string): Promise<
   await registerAndSignIn(api, waiter);
   const assigned = await waitersApi.assign(api, waiter.email, created.body.id);
   expect(assigned.status, `assign waiter: ${errorText(assigned.body)}`).toBe(200);
-  return { location: created.body, waiterEmail: waiter.email };
+  return { location: created.body, waiterEmail: waiter.email, waiter };
 }
 
 async function removeLocation(owner: Session, location: Location): Promise<string | null> {

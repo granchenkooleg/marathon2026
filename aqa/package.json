@@ -5,6 +5,7 @@
   "description": "End-to-end tests (UI + API) for the deployed Green & Tasty restaurant app",
   "scripts": {
     "test": "playwright test",
+    "test:d1": "playwright test --grep @D1",
     "test:l1": "playwright test --grep @L1",
     "test:l2": "playwright test --grep @L2",
     "test:ui": "playwright test --grep @ui",

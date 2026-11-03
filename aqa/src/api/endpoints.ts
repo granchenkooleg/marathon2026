@@ -1,5 +1,21 @@
 import type { ApiClient, ApiResponse } from './api-client';
-import type { Dish, DishSort, DishType, Location, Me, Reservation, SignInResponse, Table, TimeRange } from './models';
+import type {
+  ConsolidatedItem,
+  Dish,
+  DishSort,
+  DishType,
+  GroupSessions,
+  GroupStatus,
+  GuestSessionCreated,
+  Location,
+  Me,
+  Order,
+  OwnerSession,
+  Reservation,
+  SignInResponse,
+  Table,
+  TimeRange,
+} from './models';
 
 export interface RegisterBody {
   firstName: string;
@@ -72,6 +88,42 @@ export const reservationsApi = {
   edit: (api: ApiClient, body: { reservationId: string; startTime: string; endTime: string; guestCount: number }) =>
     api.send<Reservation>('PUT', 'reservations', { data: body }),
   cancel: (api: ApiClient, id: string) => api.send<{ message?: string }>('DELETE', 'reservations', { data: { id } }),
+};
+
+/** Owner side of the group pre-order (Cognito token of the reservation owner). */
+export const groupApi = {
+  inviteToken: (api: ApiClient, reservationId: string) =>
+    api.send<{ token: string }>('GET', `reservations/${encodeURIComponent(reservationId)}/invite-token`),
+  ownerSession: (api: ApiClient, reservationId: string) =>
+    api.send<OwnerSession>('GET', `reservations/${encodeURIComponent(reservationId)}/guest-session-id`),
+  sessions: (api: ApiClient, groupId: string) =>
+    api.send<GroupSessions>('GET', `guest/groups/${encodeURIComponent(groupId)}/sessions`),
+  status: (api: ApiClient, groupId: string) =>
+    api.send<GroupStatus>('GET', `guest/groups/${encodeURIComponent(groupId)}/status`),
+  submit: (api: ApiClient, groupId: string, reservationId: string) =>
+    api.send<ConsolidatedItem[]>('POST', `group-reservations/${encodeURIComponent(groupId)}/submit`, { data: { reservationId } }),
+  removeParticipant: (api: ApiClient, groupId: string, guestSessionId: string) =>
+    api.send<GroupSessions>(
+      'DELETE',
+      `guest/groups/${encodeURIComponent(groupId)}/sessions/${encodeURIComponent(guestSessionId)}`,
+    ),
+};
+
+/** Guest side: anonymous join, then calls with the guest session token. */
+export const guestApi = {
+  join: (api: ApiClient, groupId: string, guestName: string) =>
+    api.send<GuestSessionCreated>('POST', 'guest/sessions', { data: { groupReservationId: groupId, guestName } }),
+  addDish: (api: ApiClient, sessionId: string, dishId: string, quantity: number) =>
+    api.send('POST', `guest/sessions/${encodeURIComponent(sessionId)}/dishes`, { data: { dishId, quantity } }),
+  submitCart: (api: ApiClient, sessionId: string) =>
+    api.send('POST', `guest/sessions/${encodeURIComponent(sessionId)}/submit`, { data: {} }),
+};
+
+export const ordersApi = {
+  create: (api: ApiClient, reservationId: string, items: { dishId: string; quantity: number }[]) =>
+    api.send<Order>('POST', 'orders', { data: { reservationId, orderItems: items } }),
+  byReservation: (api: ApiClient, reservationId: string) =>
+    api.send<Order>('GET', `orders/${encodeURIComponent(reservationId)}`),
 };
 
 export type { ApiResponse };
