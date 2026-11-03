@@ -4,7 +4,6 @@ import { ReservationStatus } from '../../src/api/models';
 import { addMinutes, iso, minutesFromNow, SLOT_MINUTES, utcDayAt } from '../../src/data/time';
 import { expect, test } from '../../src/fixtures';
 import { book, sameInstant } from '../../src/support/booking';
-import { knownDefect } from '../../src/support/defects';
 
 /**
  * Booking rules checked at the API level. The UI only offers half-hour slots, so boundaries such as
@@ -233,8 +232,8 @@ test.describe('Cancelling a reservation', { tag: ['@L2', '@api'] }, () => {
     });
   }
 
-  test('a cancelled slot can be booked again', { tag: '@known-defect' }, async ({ customer, tables }) => {
-    knownDefect('D6');
+  test('a cancelled slot can be booked again', async ({ customer, tables }) => {
+    // Was D6 (see README); fixed.
     const table = await tables.create(2);
     const start = utcDayAt(3, 12);
     const first = (await book(customer, table, start)).body;

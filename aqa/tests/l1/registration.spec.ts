@@ -102,8 +102,8 @@ test.describe('Registration', { tag: ['@L1', '@ui'] }, () => {
     await expect(signUp.fieldError('firstName')).toHaveText('First name must be up to 50 characters.');
   });
 
-  test('Last name over 50 chars shows a message about the last name', { tag: '@known-defect' }, async ({ page }) => {
-    knownDefect('D3');
+  test('Last name over 50 chars shows a message about the last name', async ({ page }) => {
+    // Was D3 (see README); fixed.
     const signUp = new SignUpPage(page);
     await signUp.open();
     await signUp.fill(newUser({ lastName: nameOfLength(51) }));
@@ -225,8 +225,8 @@ test.describe('Registration API', { tag: ['@L1', '@api'] }, () => {
     expect(me.body.role).toBe('Customer');
   });
 
-  test('a duplicate email is rejected with a client error status', { tag: '@known-defect' }, async ({ api }) => {
-    knownDefect('D1');
+  test('a duplicate email is rejected with a client error status', async ({ api }) => {
+    // Was D1 (see README); fixed.
     const user = newUser();
     await registerUser(api, user);
     const res = await authApi.register(api, { ...user, confirmPassword: user.password });
@@ -234,8 +234,8 @@ test.describe('Registration API', { tag: ['@L1', '@api'] }, () => {
     expect(res.status, errorText(res.body)).toBeLessThan(500);
   });
 
-  test('a password that breaks the character policy is rejected with 400', { tag: '@known-defect' }, async ({ api }) => {
-    knownDefect('D8');
+  test('a password that breaks the character policy is rejected with 400', async ({ api }) => {
+    // Was D8 (see README); fixed.
     const user = newUser({ password: 'password1' });
     const res = await authApi.register(api, { ...user, confirmPassword: user.password });
     expect(res.status, errorText(res.body)).toBe(400);

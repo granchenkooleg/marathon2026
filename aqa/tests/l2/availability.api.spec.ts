@@ -2,7 +2,6 @@ import { tablesApi } from '../../src/api/endpoints';
 import { iso, utcDayAt } from '../../src/data/time';
 import { expect, test } from '../../src/fixtures';
 import { book, freeSlots, sameInstant } from '../../src/support/booking';
-import { knownDefect } from '../../src/support/defects';
 
 test.describe('Table availability (API)', { tag: ['@L2', '@api'] }, () => {
   test('a booked slot is no longer offered for that table, other tables keep it', async ({ api, customer, privateTables }) => {
@@ -26,8 +25,8 @@ test.describe('Table availability (API)', { tag: ['@L2', '@api'] }, () => {
     expect(ids).not.toContain(forTwo.id);
   });
 
-  test('search returns every free table of a location, every time', { tag: '@known-defect' }, async ({ api, privateLocation, privateTables }) => {
-    knownDefect('D11');
+  test('search returns every free table of a location, every time', async ({ api, privateLocation, privateTables }) => {
+    // Was D11 (see README); fixed.
     const created = await Promise.all(Array.from({ length: 25 }, () => privateTables.create(4)));
     const query = { locationId: privateLocation.location.id, capacity: 1, startTime: iso(utcDayAt(3, 12)) };
 

@@ -5,7 +5,6 @@ import { expect, test } from '../../src/fixtures';
 import { LoginModal } from '../../src/pages/auth.pages';
 import { BookingPage, ReservationsPage } from '../../src/pages/booking.pages';
 import { book, freeSlots, sameInstant } from '../../src/support/booking';
-import { knownDefect } from '../../src/support/defects';
 import { sidestepMonthEndDateDefect } from '../../src/support/browser-clock';
 import { signInBrowser } from '../../src/support/sessions';
 
@@ -202,8 +201,8 @@ test.describe('Table booking (UI)', { tag: ['@L2', '@ui'] }, () => {
 });
 
 test.describe('Booking search dates', { tag: ['@L2', '@ui'] }, () => {
-  test('searching on the 31st of a month asks for the selected date', { tag: '@known-defect' }, async ({ page }) => {
-    knownDefect('D10');
+  test('searching on the 31st of a month asks for the selected date', async ({ page }) => {
+    // Was D10 (see README); fixed.
     // Jan 31 → the visitor picks Feb 2. Deterministic, independent of the real date.
     await page.clock.install({ time: new Date('2027-01-31T08:00:00Z') });
     const booking = new BookingPage(page);

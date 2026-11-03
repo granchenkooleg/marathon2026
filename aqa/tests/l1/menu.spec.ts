@@ -6,7 +6,6 @@ import { seededDishes } from '../../src/data/seeded';
 import { expect, test } from '../../src/fixtures';
 import { BookingPage } from '../../src/pages/booking.pages';
 import { LocationPage, MainPage, MenuPage } from '../../src/pages/menu.pages';
-import { knownDefect } from '../../src/support/defects';
 
 const CATEGORIES: DishType[] = ['Appetizer', 'MainCourse', 'Dessert'];
 
@@ -109,8 +108,8 @@ test.describe('Menu', { tag: ['@L1', '@ui'] }, () => {
     await expect(menu.dishModal).toContainText(`${details.calories} kcal`);
   });
 
-  test('the menu page offers search by dish name', { tag: '@known-defect' }, async ({ page }) => {
-    knownDefect('D5');
+  test('the menu page offers search by dish name', async ({ page }) => {
+    // Was D5 (see README); fixed.
     const menu = new MenuPage(page);
     await menu.open();
     await expect(menu.searchBox).toBeVisible({ timeout: 3_000 });
@@ -158,8 +157,8 @@ test.describe('Main page: popular dishes and locations', { tag: ['@L1', '@ui'] }
     await expect(new LocationPage(page).address).toHaveText(first.address);
   });
 
-  test('opening a popular dish shows its details', { tag: '@known-defect' }, async ({ page }) => {
-    knownDefect('D4');
+  test('opening a popular dish shows its details', async ({ page }) => {
+    // Was D4 (see README); fixed.
     const main = new MainPage(page);
     await main.open();
     const first = main.popularDishes.first();
