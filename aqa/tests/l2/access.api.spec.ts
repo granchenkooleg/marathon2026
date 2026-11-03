@@ -4,7 +4,6 @@ import { ReservationStatus } from '../../src/api/models';
 import { addMinutes, iso, SLOT_MINUTES, utcDayAt } from '../../src/data/time';
 import { expect, test } from '../../src/fixtures';
 import { book, sameInstant } from '../../src/support/booking';
-import { knownDefect } from '../../src/support/defects';
 
 test.describe("Access to other customers' reservations", { tag: ['@L2', '@api'] }, () => {
   test("another customer's reservation is not in my list", async ({ customer, otherCustomer, tables }) => {
@@ -42,8 +41,8 @@ test.describe("Access to other customers' reservations", { tag: ['@L2', '@api'] 
     expect((await reservationsApi.byId(otherCustomer.api, theirs.id)).body.status).toBe(ReservationStatus.Reserved);
   });
 
-  test("another customer's reservation cannot be read by id", { tag: '@known-defect' }, async ({ customer, otherCustomer, tables }) => {
-    knownDefect('D7');
+  test("another customer's reservation cannot be read by id", async ({ customer, otherCustomer, tables }) => {
+    // Was D7 (see README); fixed.
     const table = await tables.create(2);
     const theirs = (await book(otherCustomer, table, utcDayAt(3, 12))).body;
 

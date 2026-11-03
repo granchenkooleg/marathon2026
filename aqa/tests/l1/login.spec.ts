@@ -3,7 +3,6 @@ import { authApi } from '../../src/api/endpoints';
 import { newUser } from '../../src/data/test-data';
 import { expect, test } from '../../src/fixtures';
 import { LoginModal } from '../../src/pages/auth.pages';
-import { knownDefect } from '../../src/support/defects';
 
 test.describe('Login', { tag: ['@L1', '@ui'] }, () => {
   test('correct email and password sign the customer in', { tag: '@smoke' }, async ({ page, customer }) => {
@@ -64,8 +63,8 @@ test.describe('Login API', { tag: ['@L1', '@api'] }, () => {
     expect(errorText(res.body)).toBe('Invalid email or password');
   });
 
-  test('an unregistered email returns 401', { tag: '@known-defect' }, async ({ api }) => {
-    knownDefect('D9');
+  test('an unregistered email returns 401', async ({ api }) => {
+    // Was D9 (see README); fixed.
     const res = await authApi.signIn(api, newUser().email, 'Aqa1!pass');
     expect(res.status, errorText(res.body)).toBe(401);
   });

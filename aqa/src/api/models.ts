@@ -65,3 +65,60 @@ export interface SignInResponse {
   idToken: string;
   accessToken: string;
 }
+
+// ── Group pre-order (Direction 1) ──────────────────────────────────────────
+
+export interface ParticipantItem {
+  dish: { id: string; name: string; price: number };
+  quantity: number;
+}
+
+/** GET /guest/groups/{id}/sessions — the Owner's own session is not listed (see aqa/README.md). */
+export interface Participant {
+  id: string;
+  type: 'Guest' | 'Owner';
+  name: string;
+  items: ParticipantItem[];
+  total: number;
+  isSubmitted: boolean;
+}
+
+export interface GroupSessions {
+  participants: Participant[];
+  total: number;
+}
+
+/** GET /reservations/{id}/guest-session-id */
+export interface OwnerSession {
+  guestSessionId: string;
+  groupReservationId: string;
+}
+
+/** POST /guest/sessions (PascalCase on the wire). */
+export interface GuestSessionCreated {
+  SessionId: string;
+  SessionToken: string;
+}
+
+export interface GroupStatus {
+  currentParticipants: number;
+  maxCapacity: number;
+  status: 'Open' | 'Submitted' | 'Closed';
+}
+
+/** POST /group-reservations/{id}/submit — one item per dish, quantities summed. */
+export interface ConsolidatedItem {
+  dishId: string;
+  quantity: number;
+}
+
+/** GET /orders/{reservationId} */
+export interface Order {
+  orderId: string;
+  reservationId: string;
+  status: number;
+  orderItems: { dish: { id: string; name: string; price: number }; quantity: number }[];
+}
+
+/** Backend enum OrderStatus serialised as a number. */
+export const OrderStatus = { SubmittedByCustomer: 3 } as const;

@@ -815,6 +815,55 @@ public class GuestSessionServiceTests
 
     [Theory]
     [AutoData]
+    public async Task DeleteGuestSessionAsync_LeavesOutRemovedSession_WhenIndexStillReturnsIt(
+        GroupReservation groupReservation,
+        Reservation reservation,
+        string userId,
+        GuestSession guestSessionToDelete,
+        GuestSession remainingGuestSession,
+        Dish dish)
+    {
+        reservation.CustomerId = userId;
+        groupReservation.ReservationId = reservation.Id;
+
+        guestSessionToDelete.IsOwnerSession = false;
+        guestSessionToDelete.GroupReservationId = groupReservation.GroupReservationId;
+        guestSessionToDelete.Dishes = [new OrderItem { DishId = dish.Id, Quantity = 2 }];
+
+        remainingGuestSession.IsOwnerSession = false;
+        remainingGuestSession.GroupReservationId = groupReservation.GroupReservationId;
+        remainingGuestSession.Dishes = [new OrderItem { DishId = dish.Id, Quantity = 1 }];
+
+        _mockGroupReservationRepository
+            .Setup(r => r.GetGroupReservationByIdAsync(groupReservation.GroupReservationId))
+            .ReturnsAsync(groupReservation);
+
+        _mockReservationRepository
+            .Setup(r => r.GetReservationByIdAsync(groupReservation.ReservationId))
+            .ReturnsAsync(reservation);
+
+        _mockGuestSessionRepository
+            .Setup(r => r.GetByGuestSessionId(guestSessionToDelete.Id))
+            .ReturnsAsync(guestSessionToDelete);
+
+        // The GSI query lags behind the delete and still returns the removed session.
+        _mockGuestSessionRepository
+            .Setup(r => r.GetAllByGroupReservationIdAsync(groupReservation.GroupReservationId))
+            .ReturnsAsync([guestSessionToDelete, remainingGuestSession]);
+
+        _mockDishRepository
+            .Setup(r => r.GetDishesByIdsAsync(It.IsAny<IEnumerable<string>>()))
+            .ReturnsAsync([dish]);
+
+        var result = await _guestSessionService.DeleteGuestSessionAsync(userId, groupReservation.GroupReservationId, guestSessionToDelete.Id);
+
+        var participant = Assert.Single(result.Participants);
+        Assert.Equal(remainingGuestSession.Id, participant.Id);
+        Assert.Equal(dish.Price, result.Total);
+    }
+
+    [Theory]
+    [AutoData]
     public async Task GetOrCreateOwnerGuestSessionIdAsync_CreatesNew_WhenNoneExists(
         Reservation reservation,
         GroupReservation groupReservation,

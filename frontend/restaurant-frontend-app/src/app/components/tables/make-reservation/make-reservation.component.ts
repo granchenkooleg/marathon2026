@@ -3,7 +3,7 @@ import {
   EventEmitter,
   Input,
   Output,
-  ChangeDetectionStrategy, inject,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { CustomButtonComponent } from '@app/shared/custom-components/custom-button/custom-button.component';
@@ -12,7 +12,7 @@ import { CustomSelectComponent } from '@app/shared/custom-components/custom-sele
 import { Table } from '@app/models/tables/table.model';
 import { TimeRange } from '@app/models/tables/time-range.model';
 import { formatTime } from '@app/shared/helpers/date-helpers';
-import {ToastService} from '@app/services/toast/toast.service';
+
 @Component({
   selector: 'app-make-reservation',
   imports: [
@@ -33,8 +33,6 @@ export class MakeReservationComponent {
   @Input() selectedTimeRange!: TimeRange;
   @Input() guests = 1;
 
-  private toast = inject(ToastService);
-
   @Output() closeModal = new EventEmitter<void>();
   @Output() makeReservation = new EventEmitter<{
     tableId: string;
@@ -54,7 +52,6 @@ export class MakeReservationComponent {
       timeRange: this.selectedTimeRange,
       guests: this.guests,
     });
-   this.toast.success('Reservation created successfully.', 'Success');
   }
 
   onClose() {

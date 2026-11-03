@@ -41,6 +41,18 @@
           }
         </div>
 
+        <div class="search-box">
+          <label class="visually-hidden" for="dishSearch">Search dishes by name</label>
+          <input
+            id="dishSearch"
+            type="search"
+            placeholder="Search dishes"
+            autocomplete="off"
+            [value]="searchTerm"
+            (input)="onSearch($event)"
+          />
+        </div>
+
         <div class="sort-dropdown">
           <label for="sortSelect">Sort by:</label>
           <select id="sortSelect" (change)="onSortChanged($event)">
@@ -52,6 +64,10 @@
           </select>
         </div>
       </div>
+
+      @if (searchTerm.trim() && !filteredDishes.length) {
+        <p class="no-results" role="status">No dishes match “{{ searchTerm.trim() }}”.</p>
+      }
 
       <div class="dish-cards">
         @for (dish of filteredDishes; track dish) {

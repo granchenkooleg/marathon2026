@@ -56,17 +56,11 @@ public class TableService : ITableService
             tables = tables.Where(t => t.Capacity >= capacity);
         }
 
-        var availableTables = new List<Table>();
-
-        var checkTasks = tables.Select(async table =>
-        {
-            var isAvailable = await IsTableAvailableAsync(table.Id, startTime, workingDayEnd, minSlotLength);
-            if (isAvailable)
-                availableTables.Add(table);
-        });
-
-        await Task.WhenAll(checkTasks);
-        return availableTables;
+        // Each check returns its own result; adding to a shared List from parallel tasks lost tables (defect D11).
+        var candidates = tables.ToList();
+        var isAvailable = await Task.WhenAll(
+            candidates.Select(table => IsTableAvailableAsync(table.Id, startTime, workingDayEnd, minSlotLength)));
+        return candidates.Where((_, index) => isAvailable[index]).ToList();
     }
 
     public async Task<IEnumerable<Table>> GetAllTablesForLocationAsync(string locationId)

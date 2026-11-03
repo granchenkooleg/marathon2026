@@ -17,7 +17,14 @@ Restaurant booking app from EPAM IT Marathon 2026, deployed to my own AWS accoun
 | 5 | Backend (.NET): Owner group pre-order | Levels 1–3: `GET /guest/groups/{id}/sessions`, `GET /reservations/{id}/guest-session-id`, `POST /group-reservations/{id}/submit`, `DELETE /guest/groups/{id}/sessions/{guestSessionId}`. Unit tests in `backend/restaurant-backend-app/Tests`. Deployed; the routes require a Cognito token. Follow-up found while connecting HW #6: the Owner-session response also returns `groupReservationId`, submit adds the guests' dishes to the Owner's order instead of replacing it, and a repeat submit is rejected. | [PR #1](https://github.com/granchenkooleg/marathon2026/pull/1), [PR #5](https://github.com/granchenkooleg/marathon2026/pull/5), [spec](homework-backend.md) |
 | 6 | Frontend: Owner group pre-order screen | Practice, levels 1–3 and the Remove Guest bonus. Part of this app and deployed: **Group Pre-Order** on a reservation card with 2+ guests opens the screen. Checked live against the deployed API on 2026-11-02: open group, full group, submit, reload after submit, order contents. | `frontend/restaurant-frontend-app/src/app/pages/group-order-page/`, [PR #5](https://github.com/granchenkooleg/marathon2026/pull/5); first version: [epam-hw6-owner-preorder](https://github.com/granchenkooleg/epam-hw6-owner-preorder) |
 | 7 | Manual QA: US11 Guest Viewing Reservation Menu | 35 requirement findings, 30 test cases (3 passed, 8 failed, 19 not run), 8 defect reports with screenshots, course-template workbook. | [`qa/hw7-us11-guest-menu/`](qa/hw7-us11-guest-menu/README.md) |
-| 8 | Test automation | Direction 2, levels 1–2: 113 E2E UI + API tests (Playwright + TypeScript), GitHub Actions CI; ⭐ Report Portal and an AWS CodeBuild pipeline. | [`aqa/`](aqa/README.md) |
+| 8 | Test automation | 137 E2E UI + API tests (Playwright + TypeScript): Direction 1, levels 1–3 (group pre-order, 24 tests) and Direction 2, levels 1–2 (113 tests); GitHub Actions; ⭐ Report Portal and an AWS CodeBuild pipeline. 10 of the 11 defects the tests found are fixed in code, each with a unit test. | [`aqa/`](aqa/README.md) |
+
+## Quality gates
+
+| Workflow | Runs on | Checks |
+|---|---|---|
+| [`ci.yml`](.github/workflows/ci.yml) | every PR and push to `master` that touches `backend/` or `frontend/` | Backend: the whole .NET solution builds, 170 unit tests. Frontend: `tsc` for app and specs, production build (bundle budget, no config placeholders), 338 Karma unit tests in headless Chrome. No AWS access needed. |
+| [`e2e.yml`](.github/workflows/e2e.yml) | changes under `aqa/`, or on demand with a tag filter | The 137 Playwright tests against the deployed stand. |
 
 # Deployment Guide
 
@@ -170,6 +177,12 @@ For an incremental update instead of a full deploy, run the matching command for
 ```
 syndicate update
 ```
+
+> **`syndicate update` does not change a Lambda's memory.** aws-syndicate (checked in 1.21.3) reads `memory` from `lambda_config.json` when it creates a function, but `memory_size` when it updates one, so an update keeps the old value. This AWS account also rejects more than 512 MB (`MemorySize ... less than or equal to 512`), which is why `api-handler` uses 512. To change the memory of an existing function, use the AWS CLI:
+>
+> ```bash
+> aws lambda update-function-configuration --function-name api-handler --memory-size 512 --no-cli-pager --query MemorySize
+> ```
 
 ## 3. Deploy the frontend
 

@@ -1,4 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { LocationOverviewComponent } from './location-overview.component';
 import { API_BASE_URL } from '@app/shared/config/api-base-url.token';
@@ -9,7 +11,12 @@ describe('LocationOverviewComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      providers: [{ provide: API_BASE_URL, useValue: 'https://test.api' }, provideRouter([])],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        { provide: API_BASE_URL, useValue: 'https://test.api' },
+      ],
       imports: [LocationOverviewComponent],
     }).compileComponents();
 

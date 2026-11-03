@@ -11,7 +11,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { concatMap, EMPTY, finalize, of, throwError } from 'rxjs';
+import { concatMap, EMPTY, finalize, Observable, of, throwError } from 'rxjs';
 
 import { AuthenticationService } from '@app/auth/services/authentication.service';
 import { UserModel } from '@app/auth/models/user.model';
@@ -19,6 +19,10 @@ import { UsersService } from '@app/services/users/users.service';
 import { ToastService } from '@app/services/toast/toast.service';
 
 type ProfileControlName = 'firstName' | 'lastName';
+
+const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+const MAX_PHOTO_SIDE = 4096;
 
 @Component({
   selector: 'app-general-user-info',
@@ -44,6 +48,8 @@ export class GeneralInformationComponent {
   private imageRevision = 0;
   private userRevision = 0;
   private activeReader: FileReader | null = null;
+  /** Names as last stored on the server; unchanged names are not sent again. */
+  private savedNames: { firstName: string; lastName: string } | null = null;
 
   readonly userForm = this.formBuilder.nonNullable.group({
     firstName: [
@@ -93,6 +99,7 @@ export class GeneralInformationComponent {
           firstName: user.firstName,
           lastName: user.lastName,
         });
+        this.savedNames = { firstName: user.firstName, lastName: user.lastName };
 
         if (userChanged) {
           this.loadUserProfileImage(user.id);
@@ -114,6 +121,13 @@ export class GeneralInformationComponent {
       return;
     }
 
+    // Checked before reading: type, empty file, size. SVG is refused (it can carry scripts).
+    const fileError = photoFileError(file);
+    if (fileError) {
+      this.showError(fileError);
+      return;
+    }
+
     const revision = ++this.imageRevision;
     this.stopReadingPhoto();
 
@@ -127,15 +141,15 @@ export class GeneralInformationComponent {
       }
 
       this.activeReader = null;
-      this.isReadingPhoto.set(false);
 
       if (typeof reader.result !== 'string') {
+        this.isReadingPhoto.set(false);
         this.handlePhotoReadError();
         return;
       }
 
-      this.photoChanged = true;
-      this.profileImage.set(reader.result);
+      // Saving stays blocked until the image is decoded and its size is checked.
+      this.validateDecodedPhoto(reader.result, revision);
     };
 
     reader.onerror = () => {
@@ -167,14 +181,27 @@ export class GeneralInformationComponent {
     }
 
     const { firstName, lastName } = this.userForm.getRawValue();
+    const namesChanged =
+      firstName !== this.savedNames?.firstName || lastName !== this.savedNames?.lastName;
     const imageToUpload = this.photoChanged ? this.profileImage() : null;
+    if (!namesChanged && !imageToUpload) {
+      return;
+    }
+
     const imageRevision = this.imageRevision;
     const userRevision = this.userRevision;
     let uploadingPhoto = false;
+    let namesSaved = false;
 
     this.isSaving.set(true);
 
-    this.authenticationService.editProfile(firstName, lastName)
+    // Names first (only if changed), then the photo. A failed photo upload keeps the saved names,
+    // so the next Save retries only the photo.
+    const saveNames$: Observable<unknown> = namesChanged
+      ? this.authenticationService.editProfile(firstName, lastName)
+      : of(true);
+
+    saveNames$
       .pipe(
         concatMap((response) => {
           if (userRevision !== this.userRevision) {
@@ -183,6 +210,11 @@ export class GeneralInformationComponent {
 
           if (!response) {
             return throwError(() => new Error('Failed to update profile'));
+          }
+
+          if (namesChanged) {
+            this.savedNames = { firstName, lastName };
+            namesSaved = true;
           }
 
           if (!imageToUpload) {
@@ -214,7 +246,11 @@ export class GeneralInformationComponent {
 
           if (uploadingPhoto) {
             console.error('Failed to upload profile image', error);
-            this.showError('Failed to upload profile image');
+            this.showError(
+              namesSaved
+                ? 'Your name changes were saved, but the photo upload failed. Click Save Changes to retry the photo.'
+                : 'Failed to upload profile image',
+            );
           } else {
             this.showError();
           }
@@ -246,6 +282,36 @@ export class GeneralInformationComponent {
       });
   }
 
+  /** Accepts the photo only if the browser can decode it and it fits in MAX_PHOTO_SIDE × MAX_PHOTO_SIDE. */
+  private validateDecodedPhoto(dataUrl: string, revision: number): void {
+    const image = new Image();
+
+    image.onload = () => {
+      if (revision !== this.imageRevision) {
+        return;
+      }
+      this.isReadingPhoto.set(false);
+
+      if (image.naturalWidth > MAX_PHOTO_SIDE || image.naturalHeight > MAX_PHOTO_SIDE) {
+        this.showError(`Image dimensions must not exceed ${MAX_PHOTO_SIDE} × ${MAX_PHOTO_SIDE} pixels`);
+        return;
+      }
+
+      this.photoChanged = true;
+      this.profileImage.set(dataUrl);
+    };
+
+    image.onerror = () => {
+      if (revision !== this.imageRevision) {
+        return;
+      }
+      this.isReadingPhoto.set(false);
+      this.showError('Please select a valid image file');
+    };
+
+    image.src = dataUrl;
+  }
+
   private stopReadingPhoto(): void {
     const reader = this.activeReader;
     this.activeReader = null;
@@ -272,4 +338,17 @@ export class GeneralInformationComponent {
   private showError(message = 'Failed to update profile'): void {
     this.toastService.error(message, 'Error');
   }
+}
+
+function photoFileError(file: File): string | null {
+  if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
+    return 'Please select a JPEG, PNG, or WebP image';
+  }
+  if (file.size === 0) {
+    return 'Please select a non-empty image file';
+  }
+  if (file.size > MAX_PHOTO_BYTES) {
+    return 'Image must be 5 MB or smaller';
+  }
+  return null;
 }

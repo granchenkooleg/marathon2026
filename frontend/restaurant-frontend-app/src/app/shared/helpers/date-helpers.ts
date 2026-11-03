@@ -27,13 +27,10 @@ export function revertFormatTime(timeStr: string, dateStr: string): string {
     hour = 0; // Convert 12 AM to 0 hours
   }
 
-  const date = new Date();
-  date.setFullYear(new Date(dateStr).getFullYear());
-  date.setMonth(new Date(dateStr).getMonth());
-  date.setDate(new Date(dateStr).getDate());
-  date.setHours(hour, minute, 0, 0);
-
-  console.log('Reverted time:', date.toISOString(), date);
+  // Build the date in one step. Setting year, month and day one by one on today's date overflowed
+  // on the 29th–31st: on 31 Jan, setMonth(1) gave 3 Mar, so the search used the wrong month (defect D10).
+  const day = new Date(dateStr);
+  const date = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, minute, 0, 0);
   return date.toISOString();
 }
 
