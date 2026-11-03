@@ -178,6 +178,12 @@ For an incremental update instead of a full deploy, run the matching command for
 syndicate update
 ```
 
+> **`syndicate update` does not change a Lambda's memory.** aws-syndicate (checked in 1.21.3) reads `memory` from `lambda_config.json` when it creates a function, but `memory_size` when it updates one, so an update keeps the old value. To change the memory of an existing function, use the AWS CLI:
+>
+> ```bash
+> aws lambda update-function-configuration --function-name api-handler --memory-size 1024 --no-cli-pager --query MemorySize
+> ```
+
 ## 3. Deploy the frontend
 
 This section describes the manual deployment flow. It does not use GitHub Actions.
