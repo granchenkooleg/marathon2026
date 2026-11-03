@@ -196,7 +196,9 @@ public class GuestSessionService(
 
         await guestSessionRepository.DeleteAsync(session);
 
-        return await BuildSessionsSnapshotAsync(groupReservationId);
+        // The snapshot is read through a GSI, which is eventually consistent:
+        // right after the delete it can still return the removed session.
+        return await BuildSessionsSnapshotAsync(groupReservationId, removedSessionId: session.Id);
     }
 
     public async Task SubmitCartAsync(string guestSessionId)
@@ -298,10 +300,10 @@ public class GuestSessionService(
         }
     }
 
-    private async Task<GetAllSessionsResponse> BuildSessionsSnapshotAsync(string groupReservationId)
+    private async Task<GetAllSessionsResponse> BuildSessionsSnapshotAsync(string groupReservationId, string? removedSessionId = null)
     {
         var sessions = await guestSessionRepository.GetAllByGroupReservationIdAsync(groupReservationId);
-        var guestSessions = sessions.Where(s => !s.IsOwnerSession).ToList();
+        var guestSessions = sessions.Where(s => !s.IsOwnerSession && s.Id != removedSessionId).ToList();
 
         var dishIds = guestSessions
             .SelectMany(s => s.Dishes)

@@ -30,8 +30,11 @@ test.describe('Direction 1 · L3 · the Owner removes a participant', { tag: ['@
     expect(await screen.consolidated()).toEqual([`${bruschetta.name} × 2`]);
     await expect(screen.grandTotal).toHaveText('$15.00');
 
+    // GET reads the sessions through a GSI, which is eventually consistent: it may lag the delete briefly.
+    await expect
+      .poll(async () => (await groupApi.sessions(customer.api, group.groupId)).body.participants.map((item) => item.name).sort())
+      .toEqual(['Ira', 'Olena']);
     const sessions = (await groupApi.sessions(customer.api, group.groupId)).body;
-    expect(sessions.participants.map((item) => item.name).sort()).toEqual(['Ira', 'Olena']);
     expect(sessions.total).toBe(15 + 13);
     expectConsistentTotals(sessions);
   });
@@ -46,7 +49,8 @@ test.describe('Direction 1 · L3 · the Owner removes a participant', { tag: ['@
     expect(res.status, errorText(res.body)).toBe(200);
     expect(res.body.participants.map((item) => item.name)).toEqual(['Max']);
     expect(res.body.total).toBe(11);
-    expect((await groupApi.sessions(customer.api, group.groupId)).body).toEqual(res.body);
+    // GET reads the same GSI, which is eventually consistent: it converges to the response.
+    await expect.poll(async () => (await groupApi.sessions(customer.api, group.groupId)).body).toEqual(res.body);
   });
 
   test('removing the last guest leaves an empty group', { tag: '@api' }, async ({ api, customer, tables }) => {
