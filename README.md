@@ -184,8 +184,6 @@ syndicate update
 > aws lambda update-function-configuration --function-name api-handler --memory-size 512 --no-cli-pager --query MemorySize
 > ```
 
-> **On-demand DynamoDB tables must not set `read_capacity`/`write_capacity`.** For `billing_mode: PAY_PER_REQUEST`, aws-syndicate turns them into the on-demand maximum (`MaxReadRequestUnits`/`MaxWriteRequestUnits`) for the table and every GSI, so `1`/`1` caps a table at one request unit per second. Without the fields it sets `-1` (no cap). Check a table with `aws dynamodb describe-table --table-name GuestSessions --query Table.OnDemandThroughput`.
-
 ## 3. Deploy the frontend
 
 This section describes the manual deployment flow. It does not use GitHub Actions.
