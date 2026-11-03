@@ -228,7 +228,9 @@ public class ReservationService : IReservationService
         var reservations = await _reservationRepository.GetReservationsByTableIdAsync(tableId);
         var buffer = TimeSpan.FromMinutes(15);
 
+        // A cancelled reservation no longer holds the table (defect D6).
         var hasOverlap = reservations.Any(r =>
+            r.Status != ReservationStatus.Cancelled &&
             EqualityHelper.NotEqualsIgnoreCase(r.Id, reservationIdToExclude) &&
             r.EndTime > DateTime.UtcNow &&
             startTime < r.EndTime.Add(buffer) &&

@@ -58,9 +58,9 @@ public class RegistrationHandler : IApiRequestHandler
         }
 
         var registrationError = await TryRegisterUserAsync(registrationRequest);
-        if (registrationError is not null)
+        if (registrationError is { } error)
         {
-            return ResponseBuilder.CreateErrorResponse(500, registrationError ?? "User registration failed", context.Logger);
+            return ResponseBuilder.CreateErrorResponse(error.StatusCode, error.Message, context.Logger);
         }
 
         var confirmationError = await TryConfirmUserAsync(registrationRequest.Email);
@@ -92,7 +92,8 @@ public class RegistrationHandler : IApiRequestHandler
         }
     }
 
-    private async Task<string?> TryRegisterUserAsync(RegistrationRequest registrationRequest)
+    /// <summary>Returns null on success, otherwise the HTTP status and message for the client.</summary>
+    private async Task<(int StatusCode, string Message)?> TryRegisterUserAsync(RegistrationRequest registrationRequest)
     {
         var signUpRequest = new SignUpRequest
         {
@@ -109,12 +110,24 @@ public class RegistrationHandler : IApiRequestHandler
         try
         {
             var result = await _cognitoClient.SignUpAsync(signUpRequest);
-            var success = result.HttpStatusCode == HttpStatusCode.OK;
-            return success ? null : "User registration failed";
+            return result.HttpStatusCode == HttpStatusCode.OK ? null : (500, "User registration failed");
+        }
+        // Client mistakes are 4xx, not 500 (defects D1 and D8).
+        catch (UsernameExistsException)
+        {
+            return (409, "A user with this email already exists.");
+        }
+        catch (InvalidPasswordException ex)
+        {
+            return (400, ex.Message);
+        }
+        catch (InvalidParameterException ex)
+        {
+            return (400, ex.Message);
         }
         catch (Exception ex)
         {
-            return ex.Message;
+            return (500, ex.Message);
         }
     }
 

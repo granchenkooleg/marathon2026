@@ -2,6 +2,7 @@
 using Amazon.Lambda.Core;
 using APIHandler.Helpers;
 using APIHandler.Mappers;
+using APIHandler.Models.Users;
 using APIHandler.Services.Locations;
 using APIHandler.Services.Orders;
 using APIHandler.Services.Reservations;
@@ -45,6 +46,12 @@ public class GetReservationByIdHandler : IApiRequestHandler
             return ResponseBuilder.CreateErrorResponse(404, $"Reservation with id '{reservationId}' was not found.", context.Logger);
         }
 
+        // Only the customer who owns the reservation and staff may read it (defect D7: any customer could).
+        if (!CanRead(reservation.CustomerId, callerUserId, request))
+        {
+            return ResponseBuilder.CreateErrorResponse(403, "Not authorized to view this reservation.", context.Logger);
+        }
+
         var location = await _locationService.GetLocationByTableIdAsync(reservation.TableId);
 
         if (location == null)
@@ -56,5 +63,16 @@ public class GetReservationByIdHandler : IApiRequestHandler
 
         var reservationResponse = ReservationMapper.ToReservationResponse(reservation, location.Address, order);
         return ResponseBuilder.CreateSuccessResponse(reservationResponse);
+    }
+
+    private static bool CanRead(string? reservationCustomerId, string callerUserId, APIGatewayProxyRequest request)
+    {
+        if (string.Equals(reservationCustomerId, callerUserId, StringComparison.Ordinal))
+            return true;
+
+        var groups = request.RequestContext?.Authorizer?.Claims is { } claims && claims.TryGetValue("cognito:groups", out var value)
+            ? RoleHelper.ParseRoles(value)
+            : [];
+        return groups.Contains(Roles.Waiter.ToString()) || groups.Contains(Roles.Admin.ToString());
     }
 }
