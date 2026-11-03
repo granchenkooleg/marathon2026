@@ -1,0 +1,84 @@
+name: CI
+
+# Quality gates for the application code. They need no AWS access and no deployed stand,
+# so they run on every pull request; the end-to-end tests against the stand live in e2e.yml.
+on:
+  push:
+    branches: [master]
+    paths: ['backend/**', 'frontend/**', '.github/workflows/ci.yml']
+  pull_request:
+    paths: ['backend/**', 'frontend/**', '.github/workflows/ci.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend · build and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend/restaurant-backend-app
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+
+      - run: dotnet restore restaurant-backend-app.sln
+
+      # All three Lambdas compile, not only the one the tests reference.
+      - run: dotnet build restaurant-backend-app.sln --no-restore --configuration Release
+
+      - name: Unit tests
+        run: >-
+          dotnet test restaurant-backend-app.sln --no-build --configuration Release
+          --logger "trx;LogFileName=backend.trx" --results-directory TestResults
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: backend-test-results
+          path: backend/restaurant-backend-app/TestResults/
+
+  frontend:
+    name: Frontend · type check, build, unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend/restaurant-frontend-app
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: frontend/restaurant-frontend-app/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/restaurant-frontend-app/package-lock.json
+
+      - run: npm ci
+
+      # tsconfig.app.json only reaches files imported from main.ts, and ng build does not
+      # type-check specs, so both are checked explicitly.
+      - name: Type check (app and specs)
+        run: |
+          npx tsc -p tsconfig.app.json --noEmit
+          npx tsc -p tsconfig.spec.json --noEmit
+
+      # Fails on the bundle budget and on a configuration placeholder left in the bundle.
+      - name: Production build
+        env:
+          BACKEND_URL: https://example.com
+        run: npm run build
+
+      - name: Unit tests
+        run: npm run test:ci

@@ -35,6 +35,7 @@ BACKEND_URL=https://<api-id>.execute-api.<region>.amazonaws.com/develop npm run 
 | `npm start` | dev server, `development` config |
 | `npm run build` | **production** config (it is the `defaultConfiguration`); requires `BACKEND_URL` |
 | `npm test` | Karma + Jasmine, needs Chrome |
+| `npm run test:ci` | single run, `ChromeHeadlessNoSandbox` — what CI runs |
 | `npm run lint` | 216 pre-existing violations — see [§8](#8-known-debt-measured--re-check-do-not-re-measure) |
 | `npm run lint-fix` | ~40 of them auto-fix |
 | `npm run format` | Prettier over `src/**/*.{ts,html,scss}` |
@@ -211,11 +212,11 @@ npm test -- --watch=false
 
 - `npm run lint`: 216 errors / 1 warning — a11y `click-events-have-key-events` 50, `interactive-supports-focus` 48, `prefer-inject` 43, `no-inferrable-types` 22, `no-unused-vars` 14, `no-explicit-any` 11, `prefer-const` 9, `no-var` 7, template `eqeqeq` 6. Worst files: `header.component.html` (26), `waiter-make-reservation.component.html` (11), `date-helpers.ts` (10).
 - Prettier: 66 files unformatted.
-- 11 spec files are still CLI stubs; only 1 spec sets up providers.
+- 29 of 72 spec files only check that the component or service is created (re-measured 2026-11-03); all 338 tests pass, and none reaches the network.
 
 **Missing infrastructure**
 
-No CI, no branch protection, no `.nvmrc`/`engines`, no `buildspec.yml`/`amplify.yml`. Until the pipeline exists (board: `[DO] Implement Github Actions CI/CD pipeline`), the four gates in §6 are the only thing standing between a broken build and `main`. It has already reached `main` twice.
+CI exists: `.github/workflows/ci.yml` runs the four gates in §6 on every PR that touches `frontend/` or `backend/` (Node from `.nvmrc`). Still missing: branch protection that makes those checks required, and a deploy pipeline (`buildspec.yml`/`amplify.yml`) — deploys are manual (root `README.md`).
 
 ---
 
