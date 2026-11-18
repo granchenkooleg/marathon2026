@@ -8,11 +8,10 @@ Restaurant booking app from EPAM IT Marathon 2026, deployed to my own AWS accoun
 
 Built with an AI coding agent (Claude Code): about two thirds of the commits are agent-authored. My part: choosing scope, reviewing changes, deploying to my AWS account, checking the live stand, and getting the work accepted. The 137 E2E tests and CI below check the result independently of who wrote the code.
 
-## Live instance (deployed 2026-10-26, updated 2026-11-02)
+## Live instance (removed 2026-11-18)
 
-- **Frontend**: https://d1cuqmer7awnbz.cloudfront.net/main
-- **Backend API**: https://9877dqd8v8.execute-api.us-west-2.amazonaws.com/develop
-- **AWS account**: 325877452779 (us-west-2)
+The stand ran from 2026-10-26 to 2026-11-18 in my own AWS account (us-west-2). After the marathon was graded, all its AWS resources were deleted, so the old frontend and API URLs no longer work. To run it again, follow the [Deployment Guide](#deployment-guide). The E2E workflow (`e2e.yml`) needs a deployed stand: set the `BASE_URL` and `API_URL` repository variables to the new URLs.
+
 - **Source**: https://github.com/granchenkooleg/marathon2026 (public)
 
 ## Homework in this repository
